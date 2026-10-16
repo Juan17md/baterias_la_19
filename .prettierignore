@@ -1,0 +1,15 @@
+# dependencias y artefactos de Next.js
+node_modules
+.next
+out
+build
+
+# lockfile (generado por pnpm)
+pnpm-lock.yaml
+
+# assets estáticos (contienen binarios e imágenes)
+public
+
+# privado del proyecto (bóveda de Obsidian y reglas de la IA)
+docs-obsidian
+AGENTS.md

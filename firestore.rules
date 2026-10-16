@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// Reglas de seguridad de Cloud Firestore — Baterías La 19
+// Estado inicial: base de datos bloqueada por completo (denegar todo).
+// El borrador completo de reglas se implementará en la Fase 3 (ver docs-obsidian/05_Base_de_Datos.md)
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
