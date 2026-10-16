@@ -1,11 +1,92 @@
 rules_version = '2';
 
-// Reglas de seguridad de Cloud Firestore — Baterías La 19
-// Estado inicial: base de datos bloqueada por completo (denegar todo).
-// El borrador completo de reglas se implementará en la Fase 3 (ver docs-obsidian/05_Base_de_Datos.md)
-
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+    function estaAutenticado() {
+      return request.auth != null;
+    }
+
+    function perfilPropio() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    // Un usuario con `activo: false` no puede operar aunque tenga token vigente.
+    function estaActivo() {
+      return estaAutenticado() && perfilPropio().activo == true;
+    }
+
+    // Doble capa de la gestión de usuarios: además de ocultarse en la UI.
+    function esAdmin() {
+      return estaActivo() && perfilPropio().rol == 'admin';
+    }
+
+    // ---------- Usuarios ----------
+    // Gestión exclusiva del admin; cada usuario puede leer su propio perfil.
+    match /usuarios/{uid} {
+      allow get: if esAdmin() || (estaAutenticado() && request.auth.uid == uid);
+      allow list: if esAdmin();
+      allow create, update: if esAdmin();
+      allow delete: if false;
+    }
+
+    // ---------- Configuración (tasa BCV) ----------
+    // Caché de la tasa: lectura para usuarios activos; escritura validada.
+    // La corrección manual (fuente 'manual') exige rol admin.
+    match /configuracion/{docId} {
+      allow get: if estaActivo();
+      allow list: if false;
+      allow create, update: if estaActivo() &&
+        request.resource.data.valor is number && request.resource.data.valor > 0 &&
+        request.resource.data.fechaActualizacion is timestamp &&
+        (request.resource.data.fuente == 'dolarapi_oficial' || esAdmin());
+      allow delete: if false;
+    }
+
+    // ---------- Baterías (inventario) ----------
+    // Admin y usuario tienen permisos idénticos en inventario.
+    match /baterias/{bateriaId} {
+      allow read: if estaActivo();
+      allow create, update: if estaActivo();
+      allow delete: if false; // soft delete: nunca se borra físicamente
+    }
+
+    // ---------- Ventas ----------
+    match /ventas/{ventaId} {
+      allow read: if estaActivo();
+      allow create: if estaActivo() &&
+        request.resource.data.vendedor.uid == request.auth.uid &&
+        request.resource.data.estado == 'completada' &&
+        request.resource.data.total >= 0 &&
+        request.resource.data.tasaBCV > 0;
+      // Solo anulación: cualquier usuario, con motivo obligatorio y auditoría.
+      allow update: if estaActivo() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'anulacion']) &&
+        request.resource.data.estado == 'anulada' &&
+        request.resource.data.anulacion.motivo is string &&
+        request.resource.data.anulacion.motivo.size() > 0;
+      allow delete: if false;
+    }
+
+    // ---------- Movimientos (inmutables) ----------
+    match /movimientos/{movimientoId} {
+      allow read: if estaActivo();
+      allow create: if estaActivo() &&
+        request.resource.data.usuario.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ---------- Contadores ----------
+    match /contadores/{contadorId} {
+      allow get: if estaActivo();
+      allow list: if false;
+      allow update: if estaActivo() &&
+        request.resource.data.valor == resource.data.valor + 1; // solo incrementos de 1
+      allow create, delete: if false;
+    }
+
+    // ---------- Denegar todo lo demás ----------
     match /{document=**} {
       allow read, write: if false;
     }

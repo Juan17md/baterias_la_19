@@ -9,7 +9,10 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "emuladores": "firebase emulators:start",
+    "test:reglas": "firebase emulators:exec --only firestore \"vitest run\"",
+    "sembrar:admin": "node scripts/semilla-admin.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.3.1",
@@ -17,6 +20,7 @@
     "@radix-ui/react-slot": "^1.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "firebase": "^13.0.0",
     "lucide-react": "^1.57.0",
     "next": "16.4.2",
     "next-themes": "^0.4.6",
@@ -26,16 +30,20 @@
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "firebase-admin": "^14.5.0",
+    "firebase-tools": "^15.34.0",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.5"
   },
   "packageManager": "pnpm@10.28.2"
 }

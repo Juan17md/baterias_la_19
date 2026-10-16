@@ -13,18 +13,40 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 const NAVEGACION = [
-  { etiqueta: "Dashboard", href: "/dashboard", icono: LayoutDashboard },
-  { etiqueta: "Inventario", href: "/dashboard/inventario", icono: Package },
-  { etiqueta: "Historial", href: "/dashboard/historial", icono: History },
+  {
+    etiqueta: "Dashboard",
+    href: "/dashboard",
+    icono: LayoutDashboard,
+    soloAdmin: false,
+  },
+  {
+    etiqueta: "Inventario",
+    href: "/dashboard/inventario",
+    icono: Package,
+    soloAdmin: false,
+  },
+  {
+    etiqueta: "Historial",
+    href: "/dashboard/historial",
+    icono: History,
+    soloAdmin: false,
+  },
   {
     etiqueta: "Estadísticas",
     href: "/dashboard/estadisticas",
     icono: BarChart3,
+    soloAdmin: false,
   },
-  { etiqueta: "Usuarios", href: "/dashboard/usuarios", icono: Users },
+  {
+    etiqueta: "Usuarios",
+    href: "/dashboard/usuarios",
+    icono: Users,
+    soloAdmin: true,
+  },
 ] as const;
 
 type AppSidebarProps = {
@@ -35,6 +57,16 @@ type AppSidebarProps = {
 /** Barra lateral: fija en escritorio y tipo drawer en pantallas menores a lg. */
 function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
   const rutaActual = usePathname();
+  const { perfil, cerrarSesion } = useAuth();
+  const esAdmin = perfil?.rol === "admin";
+  const navegacionVisible = NAVEGACION.filter(
+    (elemento) => !elemento.soloAdmin || esAdmin,
+  );
+
+  async function manejarCerrarSesion() {
+    await cerrarSesion();
+    toast.success("Sesión cerrada.");
+  }
 
   return (
     <>
@@ -79,7 +111,7 @@ function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
           aria-label="Módulos"
           className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3"
         >
-          {NAVEGACION.map((elemento) => {
+          {navegacionVisible.map((elemento) => {
             const activo =
               elemento.href === "/dashboard"
                 ? rutaActual === "/dashboard"
@@ -110,11 +142,7 @@ function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
           <Button
             variant="ghost"
             className="w-full justify-start text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            onClick={() =>
-              toast.info(
-                "El cierre de sesión se habilitará en la Fase 3 (Autenticación).",
-              )
-            }
+            onClick={() => void manejarCerrarSesion()}
           >
             <LogOut className="size-4" aria-hidden="true" />
             Cerrar sesión

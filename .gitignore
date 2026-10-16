@@ -48,3 +48,6 @@ next-env.d.ts
 firestore-debug.log
 ui-debug.log
 .firebase/
+
+# credenciales de servicio (Admin SDK) — jamás al repositorio
+/secrets/

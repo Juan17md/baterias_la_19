@@ -1,15 +1,43 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/use-auth";
+import { iniciarSesion, mensajeDeErrorAuth } from "@/lib/firebase/auth";
 
-/** Formulario visual de inicio de sesión; la autenticación real llega en la Fase 3. */
+/** Formulario de inicio de sesión con Firebase Auth y manejo de errores. */
 function LoginForm() {
-  function manejarEnvio(evento: React.FormEvent<HTMLFormElement>) {
+  const router = useRouter();
+  const { usuario, perfil, cargando } = useAuth();
+  const [correo, setCorreo] = useState("");
+  const [contrasena, setContrasena] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    if (!cargando && usuario && perfil) {
+      router.replace("/dashboard");
+    }
+  }, [cargando, usuario, perfil, router]);
+
+  async function manejarEnvio(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    toast.info("La autenticación con Firebase se habilitará en la Fase 3.");
+    setError(null);
+    setEnviando(true);
+
+    try {
+      await iniciarSesion(correo, contrasena);
+      // La redirección ocurre cuando el AuthProvider confirma el perfil activo;
+      // si el perfil no es válido, el provider cierra la sesión con un aviso.
+    } catch (fallo) {
+      setError(mensajeDeErrorAuth(fallo));
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -46,6 +74,9 @@ function LoginForm() {
             type="email"
             autoComplete="email"
             placeholder="tu@correo.com"
+            value={correo}
+            onChange={(evento) => setCorreo(evento.target.value)}
+            disabled={enviando}
             required
           />
         </div>
@@ -60,12 +91,36 @@ function LoginForm() {
             type="password"
             autoComplete="current-password"
             placeholder="••••••••"
+            value={contrasena}
+            onChange={(evento) => setContrasena(evento.target.value)}
+            disabled={enviando}
             required
           />
         </div>
 
-        <Button type="submit" size="lg" className="mt-1 w-full">
-          Ingresar
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive-text"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        <Button
+          type="submit"
+          size="lg"
+          className="mt-1 w-full"
+          disabled={enviando}
+        >
+          {enviando ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              Ingresando…
+            </>
+          ) : (
+            "Ingresar"
+          )}
         </Button>
       </form>
 
