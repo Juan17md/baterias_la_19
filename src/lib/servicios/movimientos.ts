@@ -1,9 +1,11 @@
 import {
   collection,
+  doc,
   getDocs,
   limit,
   orderBy,
   query,
+  runTransaction,
   startAfter,
   Timestamp,
   where,
@@ -11,6 +13,7 @@ import {
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/configuracion";
+import { calcularStockBajo } from "@/lib/servicios/baterias";
 import type { Movimiento, TipoMovimiento } from "@/types";
 
 function mapearMovimiento(
@@ -122,4 +125,56 @@ export async function listarMovimientos(
         ? (documentos[documentos.length - 1] ?? null)
         : null,
   };
+}
+
+/**
+ * Elimina un movimiento manual (admin) y revierte su efecto en el stock.
+ * Los movimientos vinculados a una venta no se eliminan aquí: la venta debe
+ * anularse desde su comprobante para reponer el stock de forma consistente.
+ */
+export async function eliminarMovimiento(movimientoId: string): Promise<void> {
+  await runTransaction(db, async (transaccion) => {
+    const referenciaMovimiento = doc(db, "movimientos", movimientoId);
+    const instantaneaMovimiento = await transaccion.get(referenciaMovimiento);
+    if (!instantaneaMovimiento.exists()) {
+      throw new Error("El movimiento ya no existe.");
+    }
+
+    const datos = instantaneaMovimiento.data() as Record<string, unknown>;
+    if (datos.ventaId != null) {
+      throw new Error(
+        "Los movimientos de una venta no se pueden eliminar. Anula la venta desde su comprobante.",
+      );
+    }
+
+    const bateriaId = String(datos.bateriaId ?? "");
+    if (!bateriaId) {
+      throw new Error("El movimiento no tiene una batería asociada.");
+    }
+
+    const referenciaBateria = doc(db, "baterias", bateriaId);
+    const instantaneaBateria = await transaccion.get(referenciaBateria);
+    if (!instantaneaBateria.exists()) {
+      throw new Error("La batería asociada ya no existe.");
+    }
+
+    const bateria = instantaneaBateria.data() as Record<string, unknown>;
+    const stockActual = Number(bateria.stock ?? 0);
+    // El movimiento guarda su efecto firmado: revertirlo es restarlo.
+    const stockNuevo = stockActual - Number(datos.cantidad ?? 0);
+    if (stockNuevo < 0) {
+      throw new Error(
+        `El stock de la batería quedaría negativo (${stockNuevo}). Ajusta el inventario antes de eliminar este movimiento.`,
+      );
+    }
+
+    transaccion.update(referenciaBateria, {
+      stock: stockNuevo,
+      stockBajo: calcularStockBajo(
+        stockNuevo,
+        Number(bateria.stockMinimo ?? 0),
+      ),
+    });
+    transaccion.delete(referenciaMovimiento);
+  });
 }

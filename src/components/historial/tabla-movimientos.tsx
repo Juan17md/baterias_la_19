@@ -3,12 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
-import { Boxes, RefreshCw, TriangleAlert } from "lucide-react";
+import { Boxes, RefreshCw, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { ETIQUETAS_TIPO_MOVIMIENTO } from "@/components/inventario/etiquetas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Select,
@@ -19,7 +27,10 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUsuariosFiltro } from "@/hooks/use-usuarios-filtro";
-import { listarMovimientos } from "@/lib/servicios/movimientos";
+import {
+  eliminarMovimiento,
+  listarMovimientos,
+} from "@/lib/servicios/movimientos";
 import { cn, fechaDesdeInput, formatearFecha } from "@/lib/utils";
 import type { Movimiento, TipoMovimiento } from "@/types";
 import { CamposFecha } from "./campos-fecha";
@@ -53,6 +64,11 @@ export function TablaMovimientos() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [recarga, setRecarga] = useState(0);
+
+  const [movimientoAEliminar, setMovimientoAEliminar] =
+    useState<Movimiento | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminacion, setErrorEliminacion] = useState<string | null>(null);
 
   const rangoInvalido = Boolean(desde && hasta && desde > hasta);
   const hayFiltros =
@@ -123,6 +139,39 @@ export function TablaMovimientos() {
     setFiltroUsuario("todos");
     setDesde("");
     setHasta("");
+  }
+
+  function abrirEliminacion(movimiento: Movimiento) {
+    setErrorEliminacion(null);
+    setMovimientoAEliminar(movimiento);
+  }
+
+  function manejarCambioEliminacion(abierto: boolean) {
+    if (!abierto && eliminando) return;
+    if (!abierto) {
+      setMovimientoAEliminar(null);
+      setErrorEliminacion(null);
+    }
+  }
+
+  async function confirmarEliminacion() {
+    if (!movimientoAEliminar || eliminando) return;
+    setEliminando(true);
+    setErrorEliminacion(null);
+    try {
+      await eliminarMovimiento(movimientoAEliminar.id);
+      toast.success("Movimiento eliminado y stock actualizado.");
+      setMovimientoAEliminar(null);
+      setRecarga((valor) => valor + 1);
+    } catch (fallo) {
+      setErrorEliminacion(
+        fallo instanceof Error
+          ? fallo.message
+          : "No se pudo eliminar el movimiento.",
+      );
+    } finally {
+      setEliminando(false);
+    }
   }
 
   return (
@@ -258,6 +307,11 @@ export function TablaMovimientos() {
                   <th className="px-4 py-3 font-medium">Stock</th>
                   <th className="px-4 py-3 font-medium">Motivo</th>
                   <th className="px-4 py-3 font-medium">Usuario</th>
+                  {esAdmin ? (
+                    <th className="px-4 py-3 text-right font-medium">
+                      <span className="sr-only">Acciones</span>
+                    </th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -322,6 +376,34 @@ export function TablaMovimientos() {
                     <td className="px-4 py-3 text-xs">
                       {movimiento.usuario.nombre || "—"}
                     </td>
+                    {esAdmin ? (
+                      <td className="px-4 py-3 text-right">
+                        {movimiento.ventaId ? (
+                          <span
+                            className="text-xs text-muted-foreground"
+                            title="Anula la venta desde su comprobante para reponer el stock"
+                          >
+                            —
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="size-7 px-0"
+                            onClick={() => abrirEliminacion(movimiento)}
+                            aria-label={`Eliminar movimiento de ${
+                              movimiento.bateriaResumen.codigo || "batería"
+                            }`}
+                          >
+                            <Trash2
+                              className="size-4 text-destructive-text"
+                              aria-hidden="true"
+                            />
+                          </Button>
+                        )}
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -341,6 +423,107 @@ export function TablaMovimientos() {
           ) : null}
         </Card>
       )}
+
+      <Dialog
+        open={movimientoAEliminar !== null}
+        onOpenChange={manejarCambioEliminacion}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Eliminar movimiento</DialogTitle>
+            <DialogDescription>
+              Se eliminará el registro del historial y se revertirá su efecto en
+              el stock. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          {movimientoAEliminar ? (
+            <div className="flex flex-col gap-3">
+              <dl className="grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/30 p-3 text-sm">
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">Batería</dt>
+                  <dd className="font-mono text-xs">
+                    {movimientoAEliminar.bateriaResumen.codigo || "—"}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">Tipo</dt>
+                  <dd>{ETIQUETAS_TIPO_MOVIMIENTO[movimientoAEliminar.tipo]}</dd>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">
+                    Cantidad del movimiento
+                  </dt>
+                  <dd
+                    className={cn(
+                      "font-mono",
+                      movimientoAEliminar.cantidad > 0
+                        ? "text-success-text"
+                        : "text-destructive-text",
+                    )}
+                  >
+                    {movimientoAEliminar.cantidad > 0 ? "+" : ""}
+                    {movimientoAEliminar.cantidad}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">
+                    Ajuste al stock actual
+                  </dt>
+                  <dd
+                    className={cn(
+                      "font-mono",
+                      movimientoAEliminar.cantidad > 0
+                        ? "text-destructive-text"
+                        : "text-success-text",
+                    )}
+                  >
+                    {movimientoAEliminar.cantidad > 0 ? "−" : "+"}
+                    {Math.abs(movimientoAEliminar.cantidad)}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-xs text-muted-foreground">
+                {movimientoAEliminar.cantidad >= 0
+                  ? `Se restarán ${movimientoAEliminar.cantidad} unidades del stock actual.`
+                  : `Se devolverán ${Math.abs(
+                      movimientoAEliminar.cantidad,
+                    )} unidades al stock actual.`}{" "}
+                Si el stock quedaría negativo, la operación se bloqueará.
+              </p>
+              {errorEliminacion ? (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-text"
+                >
+                  <TriangleAlert
+                    className="mt-0.5 size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span>{errorEliminacion}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => manejarCambioEliminacion(false)}
+              disabled={eliminando}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void confirmarEliminacion()}
+              disabled={eliminando}
+            >
+              {eliminando ? "Eliminando…" : "Eliminar movimiento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

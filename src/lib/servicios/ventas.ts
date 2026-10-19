@@ -11,6 +11,7 @@ import {
   startAfter,
   Timestamp,
   where,
+  writeBatch,
   type QueryConstraint,
   type QueryDocumentSnapshot,
   type Timestamp as TipoTimestamp,
@@ -442,4 +443,102 @@ export async function anularVenta(
       });
     }
   });
+}
+
+/**
+ * Elimina una venta (solo admin) junto con sus movimientos asociados.
+ * Si estaba completada repone el stock; si ya estaba anulada, el stock ya fue
+ * repuesto y solo se borra el comprobante. El consecutivo no se reutiliza.
+ */
+export async function eliminarVenta(ventaId: string): Promise<void> {
+  // Los movimientos se buscan fuera de la transacción (no admite queries).
+  const movimientos = await getDocs(
+    query(collection(db, "movimientos"), where("ventaId", "==", ventaId)),
+  );
+
+  await runTransaction(db, async (transaccion) => {
+    const ventaRef = doc(db, COLECCION, ventaId);
+    const ventaSnap = await transaccion.get(ventaRef);
+    if (!ventaSnap.exists()) throw new Error("La venta ya no existe.");
+
+    const venta = ventaSnap.data() as Record<string, unknown>;
+    const estado = String(venta.estado ?? "");
+    if (estado !== "completada" && estado !== "anulada") {
+      throw new Error("La venta tiene un estado desconocido.");
+    }
+    const items = Array.isArray(venta.items)
+      ? (venta.items as Record<string, unknown>[])
+      : [];
+
+    if (estado === "completada") {
+      if (items.length === 0) {
+        throw new Error("La venta no tiene ítems para reponer el stock.");
+      }
+
+      // Agrupa cantidades por batería (por si hubiera ítems repetidos).
+      const cantidades = new Map<string, number>();
+      for (const item of items) {
+        const bateriaId = String(item.bateriaId ?? "");
+        if (!bateriaId) {
+          throw new Error("La venta tiene un ítem sin batería asociada.");
+        }
+        cantidades.set(
+          bateriaId,
+          (cantidades.get(bateriaId) ?? 0) + Number(item.cantidad ?? 0),
+        );
+      }
+
+      // Lecturas antes de escribir: stock actual de cada batería.
+      const entradas = [...cantidades.entries()];
+      const referencias = entradas.map(([bateriaId]) =>
+        doc(db, "baterias", bateriaId),
+      );
+      const instantaneas = await Promise.all(
+        referencias.map((referencia) => transaccion.get(referencia)),
+      );
+
+      const actualizaciones = entradas.map(([bateriaId, cantidad], indice) => {
+        const instantanea = instantaneas[indice];
+        if (!instantanea?.exists()) {
+          throw new Error(
+            "Una de las baterías de la venta ya no existe; no se puede reponer el stock.",
+          );
+        }
+        const bateria = instantanea.data() as Record<string, unknown>;
+        return {
+          referencia: doc(db, "baterias", bateriaId),
+          stock: Number(bateria.stock ?? 0) + cantidad,
+          stockMinimo: Number(bateria.stockMinimo ?? 0),
+        };
+      });
+
+      for (const actualizacion of actualizaciones) {
+        transaccion.update(actualizacion.referencia, {
+          stock: actualizacion.stock,
+          stockBajo: calcularStockBajo(
+            actualizacion.stock,
+            actualizacion.stockMinimo,
+          ),
+          actualizadoEn: serverTimestamp(),
+        });
+      }
+    }
+
+    transaccion.delete(ventaRef);
+    for (const movimiento of movimientos.docs) {
+      transaccion.delete(movimiento.ref);
+    }
+  });
+
+  // Limpieza de movimientos que hayan aparecido durante una anulación concurrente.
+  const restantes = await getDocs(
+    query(collection(db, "movimientos"), where("ventaId", "==", ventaId)),
+  );
+  if (!restantes.empty) {
+    const lote = writeBatch(db);
+    for (const documento of restantes.docs) {
+      lote.delete(documento.ref);
+    }
+    await lote.commit();
+  }
 }

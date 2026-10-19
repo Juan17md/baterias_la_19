@@ -105,6 +105,54 @@ async function sembrarBase() {
     });
     await setDoc(doc(fs, "contadores", "ventas"), { valor: 0 });
     await setDoc(doc(fs, "ventas", "venta-1"), datosVenta(UID_USUARIO));
+    await setDoc(doc(fs, "movimientos", "mov-manual"), {
+      fecha: serverTimestamp(),
+      tipo: "entrada",
+      bateriaId: "bat-1",
+      bateriaResumen: {
+        codigo: "BL19-0001",
+        marca: "Willard",
+        modelo: "W-500",
+      },
+      cantidad: 2,
+      stockAntes: 3,
+      stockDespues: 5,
+      motivo: "Compra a proveedor",
+      ventaId: null,
+      usuario: { uid: UID_USUARIO, nombre: "Usuario" },
+    });
+    await setDoc(doc(fs, "movimientos", "mov-venta"), {
+      fecha: serverTimestamp(),
+      tipo: "salida",
+      bateriaId: "bat-1",
+      bateriaResumen: {
+        codigo: "BL19-0001",
+        marca: "Willard",
+        modelo: "W-500",
+      },
+      cantidad: -1,
+      stockAntes: 6,
+      stockDespues: 5,
+      motivo: "Venta N.º 1",
+      ventaId: "venta-1",
+      usuario: { uid: UID_USUARIO, nombre: "Usuario" },
+    });
+    // Movimiento anterior a la Fase 5, sin el campo `ventaId`.
+    await setDoc(doc(fs, "movimientos", "mov-antiguo"), {
+      fecha: serverTimestamp(),
+      tipo: "ajuste",
+      bateriaId: "bat-1",
+      bateriaResumen: {
+        codigo: "BL19-0001",
+        marca: "Willard",
+        modelo: "W-500",
+      },
+      cantidad: -1,
+      stockAntes: 6,
+      stockDespues: 5,
+      motivo: "Ajuste por conteo físico",
+      usuario: { uid: UID_USUARIO, nombre: "Usuario" },
+    });
   });
 }
 
@@ -399,6 +447,60 @@ describe("anulación de ventas", () => {
         },
       }),
     );
+  });
+});
+
+describe("eliminación de movimientos", () => {
+  it("el admin puede eliminar un movimiento manual", async () => {
+    await assertSucceeds(
+      deleteDoc(doc(comoAdmin(), "movimientos", "mov-manual")),
+    );
+  });
+
+  it("el admin puede eliminar un movimiento antiguo sin campo ventaId", async () => {
+    await assertSucceeds(
+      deleteDoc(doc(comoAdmin(), "movimientos", "mov-antiguo")),
+    );
+  });
+
+  it("el admin puede eliminar un movimiento de venta a nivel de reglas", async () => {
+    await assertSucceeds(
+      deleteDoc(doc(comoAdmin(), "movimientos", "mov-venta")),
+    );
+  });
+
+  it("un usuario activo no puede eliminar movimientos", async () => {
+    await assertFails(
+      deleteDoc(doc(comoUsuario(), "movimientos", "mov-manual")),
+    );
+  });
+
+  it("un usuario inactivo no puede eliminar movimientos", async () => {
+    await assertFails(
+      deleteDoc(doc(comoInactivo(), "movimientos", "mov-manual")),
+    );
+  });
+
+  it("nadie puede modificar un movimiento", async () => {
+    await assertFails(
+      updateDoc(doc(comoAdmin(), "movimientos", "mov-manual"), {
+        cantidad: 99,
+      }),
+    );
+  });
+});
+
+describe("eliminación de ventas", () => {
+  it("el admin puede eliminar una venta", async () => {
+    await assertSucceeds(deleteDoc(doc(comoAdmin(), "ventas", "venta-1")));
+  });
+
+  it("un usuario activo no puede eliminar ventas", async () => {
+    await assertFails(deleteDoc(doc(comoUsuario(), "ventas", "venta-1")));
+  });
+
+  it("un usuario inactivo no puede eliminar ventas", async () => {
+    await assertFails(deleteDoc(doc(comoInactivo(), "ventas", "venta-1")));
   });
 });
 

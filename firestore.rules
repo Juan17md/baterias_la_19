@@ -66,15 +66,21 @@ service cloud.firestore {
         request.resource.data.estado == 'anulada' &&
         request.resource.data.anulacion.motivo is string &&
         request.resource.data.anulacion.motivo.size() > 0;
-      allow delete: if false;
+      // El admin puede eliminar la venta; la app repone stock si estaba
+      // completada y borra los movimientos asociados en la misma transacción.
+      allow delete: if esAdmin();
     }
 
-    // ---------- Movimientos (inmutables) ----------
+    // ---------- Movimientos (inmutables salvo eliminación del admin) ----------
     match /movimientos/{movimientoId} {
       allow read: if estaActivo();
       allow create: if estaActivo() &&
         request.resource.data.usuario.uid == request.auth.uid;
-      allow update, delete: if false;
+      allow update: if false;
+      // Solo el admin puede eliminar movimientos. Si pertenecen a una venta,
+      // la app los borra al eliminar la venta desde su flujo (con reposición
+      // de stock); el historial no ofrece borrado directo para esos casos.
+      allow delete: if esAdmin();
     }
 
     // ---------- Contadores ----------

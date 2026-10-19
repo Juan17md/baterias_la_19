@@ -3,12 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
-import { ReceiptText, RefreshCw, TriangleAlert } from "lucide-react";
+import { ReceiptText, RefreshCw, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { BadgeEstadoVenta } from "@/components/ventas/badge-estado-venta";
 import { ETIQUETAS_METODO_PAGO } from "@/components/ventas/etiquetas";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Select,
@@ -19,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUsuariosFiltro } from "@/hooks/use-usuarios-filtro";
-import { listarVentas } from "@/lib/servicios/ventas";
+import { eliminarVenta, listarVentas } from "@/lib/servicios/ventas";
 import { fechaDesdeInput, formatearFecha, formatearNumero } from "@/lib/utils";
 import type { EstadoVenta, Venta } from "@/types";
 import { CamposFecha } from "./campos-fecha";
@@ -43,6 +51,12 @@ export function TablaVentas() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [recarga, setRecarga] = useState(0);
+
+  const [ventaAEliminar, setVentaAEliminar] = useState<Venta | null>(null);
+  const [eliminandoVenta, setEliminandoVenta] = useState(false);
+  const [errorEliminarVenta, setErrorEliminarVenta] = useState<string | null>(
+    null,
+  );
 
   const rangoInvalido = Boolean(desde && hasta && desde > hasta);
   const hayFiltros =
@@ -113,6 +127,44 @@ export function TablaVentas() {
     setFiltroVendedor("todos");
     setDesde("");
     setHasta("");
+  }
+
+  function abrirEliminarVenta(venta: Venta) {
+    setErrorEliminarVenta(null);
+    setVentaAEliminar(venta);
+  }
+
+  function manejarCambioEliminarVenta(abierto: boolean) {
+    if (!abierto && eliminandoVenta) return;
+    if (!abierto) {
+      setVentaAEliminar(null);
+      setErrorEliminarVenta(null);
+    }
+  }
+
+  async function confirmarEliminarVenta() {
+    if (!ventaAEliminar || eliminandoVenta) return;
+    const eraCompletada = ventaAEliminar.estado === "completada";
+    setEliminandoVenta(true);
+    setErrorEliminarVenta(null);
+    try {
+      await eliminarVenta(ventaAEliminar.id);
+      toast.success(
+        eraCompletada
+          ? "Venta eliminada y stock repuesto."
+          : "Venta eliminada (el stock ya estaba repuesto).",
+      );
+      setVentaAEliminar(null);
+      setRecarga((valor) => valor + 1);
+    } catch (fallo) {
+      setErrorEliminarVenta(
+        fallo instanceof Error
+          ? fallo.message
+          : "No se pudo eliminar la venta.",
+      );
+    } finally {
+      setEliminandoVenta(false);
+    }
   }
 
   return (
@@ -307,14 +359,31 @@ export function TablaVentas() {
                         <BadgeEstadoVenta estado={venta.estado} />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button asChild variant="ghost" size="sm">
-                          <Link
-                            href={`/dashboard/historial/venta/${venta.id}`}
-                            aria-label={`Ver comprobante de la venta ${venta.numero}`}
-                          >
-                            Ver
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button asChild variant="ghost" size="sm">
+                            <Link
+                              href={`/dashboard/historial/venta/${venta.id}`}
+                              aria-label={`Ver comprobante de la venta ${venta.numero}`}
+                            >
+                              Ver
+                            </Link>
+                          </Button>
+                          {esAdmin ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="size-7 px-0"
+                              onClick={() => abrirEliminarVenta(venta)}
+                              aria-label={`Eliminar venta ${venta.numero}`}
+                            >
+                              <Trash2
+                                className="size-4 text-destructive-text"
+                                aria-hidden="true"
+                              />
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -336,6 +405,91 @@ export function TablaVentas() {
           ) : null}
         </Card>
       )}
+
+      <Dialog
+        open={ventaAEliminar !== null}
+        onOpenChange={manejarCambioEliminarVenta}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Eliminar venta N.º {ventaAEliminar?.numero ?? ""}
+            </DialogTitle>
+            <DialogDescription>
+              Se eliminará la venta del historial junto con sus movimientos
+              asociados. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          {ventaAEliminar ? (
+            <div className="flex flex-col gap-3">
+              <dl className="grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/30 p-3 text-sm">
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">Estado</dt>
+                  <dd>
+                    <BadgeEstadoVenta estado={ventaAEliminar.estado} />
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">Total</dt>
+                  <dd className="font-mono text-xs">
+                    $ {formatearNumero(ventaAEliminar.total)}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">Fecha</dt>
+                  <dd className="text-xs">
+                    {ventaAEliminar.fecha
+                      ? formatearFecha(ventaAEliminar.fecha.toDate())
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-xs text-muted-foreground">Ítems</dt>
+                  <dd className="font-mono text-xs">
+                    {ventaAEliminar.items.length}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-xs text-muted-foreground">
+                {ventaAEliminar.estado === "completada"
+                  ? "Se repondrá el stock de sus ítems y se borrarán los movimientos asociados."
+                  : "El stock ya fue repuesto al anularla; solo se borrarán el comprobante y sus movimientos."}{" "}
+                El consecutivo no se reutilizará.
+              </p>
+              {errorEliminarVenta ? (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-text"
+                >
+                  <TriangleAlert
+                    className="mt-0.5 size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span>{errorEliminarVenta}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => manejarCambioEliminarVenta(false)}
+              disabled={eliminandoVenta}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void confirmarEliminarVenta()}
+              disabled={eliminandoVenta}
+            >
+              {eliminandoVenta ? "Eliminando…" : "Eliminar venta"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
