@@ -68,3 +68,55 @@ export type Movimiento = {
   ventaId: string | null;
   usuario: ResumenUsuario;
 };
+
+/** Formas de pago aceptadas en el mostrador (05_Base_de_Datos §2.3). */
+export type MetodoPago =
+  | "efectivo_bs"
+  | "efectivo_usd"
+  | "pago_movil"
+  | "transferencia_bs"
+  | "zelle"
+  | "binance"
+  | "punto_venta";
+
+/** Estado lógico de una venta (la anulación nunca borra el documento). */
+export type EstadoVenta = "completada" | "anulada";
+
+/** Ítem embebido en `ventas/{id}.items` (snapshot al momento de vender). */
+export type ItemVenta = {
+  bateriaId: string;
+  codigo: string;
+  descripcion: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+};
+
+/** Auditoría de la anulación de una venta. */
+export type AnulacionVenta = {
+  uid: string;
+  nombre: string;
+  fecha: Timestamp | null;
+  motivo: string;
+};
+
+/** Documento `ventas/{id}` de Firestore. */
+export type Venta = {
+  id: string;
+  numero: number;
+  fecha: Timestamp | null;
+  cliente: { nombre: string; telefono: string } | null;
+  items: ItemVenta[];
+  subtotal: number;
+  descuento: number;
+  total: number;
+  tasaBCV: number;
+  totalBs: number;
+  metodoPago: MetodoPago;
+  incluyeInstalacion: boolean;
+  recibioBateriaUsada: boolean;
+  vendedor: ResumenUsuario;
+  notas: string | null;
+  estado: EstadoVenta;
+  anulacion: AnulacionVenta | null;
+};

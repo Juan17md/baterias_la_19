@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DialogoRegistrarVenta } from "@/components/ventas/dialogo-registrar-venta";
 import { useAuth } from "@/hooks/use-auth";
 import { useTasa } from "@/hooks/use-tasa";
 import { formatearFecha, formatearNumero } from "@/lib/utils";
@@ -32,6 +33,7 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
   const [dialogoTasaAbierto, setDialogoTasaAbierto] = useState(false);
   const [valorTasa, setValorTasa] = useState("");
   const [guardandoTasa, setGuardandoTasa] = useState(false);
+  const [ventaAbierta, setVentaAbierta] = useState(false);
 
   const esAdmin = perfil?.rol === "admin";
 
@@ -116,11 +118,7 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
         </div>
       )}
 
-      <Button
-        onClick={() =>
-          toast.info("El registro de ventas estará disponible en la Fase 5.")
-        }
-      >
+      <Button onClick={() => setVentaAbierta(true)}>
         <ShoppingCart className="size-4" aria-hidden="true" />
         <span className="hidden sm:inline">Registrar venta</span>
       </Button>
@@ -182,6 +180,11 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <DialogoRegistrarVenta
+        abierto={ventaAbierta}
+        onAbiertoCambio={setVentaAbierta}
+      />
     </header>
   );
 }

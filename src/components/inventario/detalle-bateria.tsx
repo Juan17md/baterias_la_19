@@ -9,6 +9,7 @@ import {
   Pencil,
   Power,
   PowerOff,
+  ShoppingCart,
   SlidersHorizontal,
   TriangleAlert,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DialogoRegistrarVenta } from "@/components/ventas/dialogo-registrar-venta";
 import {
   actualizarBateria,
   cambiarActivoBateria,
@@ -89,6 +91,7 @@ export function DetalleBateria({ id }: { id: string }) {
 
   const [entradaAbierta, setEntradaAbierta] = useState(false);
   const [ajusteAbierto, setAjusteAbierto] = useState(false);
+  const [ventaAbierta, setVentaAbierta] = useState(false);
 
   const [desactivarAbierto, setDesactivarAbierto] = useState(false);
   const [reactivarAbierto, setReactivarAbierto] = useState(false);
@@ -291,7 +294,21 @@ export function DetalleBateria({ id }: { id: string }) {
               <SlidersHorizontal className="size-4" aria-hidden="true" />
               Ajustar
             </Button>
-            <Button onClick={() => setEntradaAbierta(true)}>
+            <Button
+              onClick={() => setVentaAbierta(true)}
+              disabled={!bateria.activo || bateria.stock === 0}
+              title={
+                !bateria.activo
+                  ? "Reactiva el producto para poder venderlo"
+                  : bateria.stock === 0
+                    ? "Sin stock disponible"
+                    : undefined
+              }
+            >
+              <ShoppingCart className="size-4" aria-hidden="true" />
+              Registrar venta
+            </Button>
+            <Button variant="outline" onClick={() => setEntradaAbierta(true)}>
               <PackagePlus className="size-4" aria-hidden="true" />
               Registrar entrada
             </Button>
@@ -526,6 +543,13 @@ export function DetalleBateria({ id }: { id: string }) {
         abierto={entradaAbierta}
         onAbiertoCambio={setEntradaAbierta}
         onRegistrada={() => setRecarga((valor) => valor + 1)}
+      />
+
+      <DialogoRegistrarVenta
+        abierto={ventaAbierta}
+        onAbiertoCambio={setVentaAbierta}
+        bateriaInicial={bateria}
+        onVentaRegistrada={() => setRecarga((valor) => valor + 1)}
       />
 
       <DialogoAjuste

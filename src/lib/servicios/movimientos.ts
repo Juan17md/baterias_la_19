@@ -5,7 +5,9 @@ import {
   orderBy,
   query,
   startAfter,
+  Timestamp,
   where,
+  type QueryConstraint,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/configuracion";
@@ -60,6 +62,57 @@ export async function listarMovimientosDeBateria(
   );
   const instantanea = await getDocs(consulta);
   const documentos = instantanea.docs;
+  return {
+    movimientos: documentos.map((documento) =>
+      mapearMovimiento(documento.id, documento.data()),
+    ),
+    ultimo:
+      documentos.length === cantidad
+        ? (documentos[documentos.length - 1] ?? null)
+        : null,
+  };
+}
+
+export type FiltrosMovimientos = {
+  tipo?: TipoMovimiento | "todos";
+  usuarioUid?: string | "todos";
+  desde?: Date | null;
+  hasta?: Date | null;
+  cantidad?: number;
+  cursor?: QueryDocumentSnapshot | null;
+};
+
+/** Historial global de movimientos paginado por fecha descendente, con filtros. */
+export async function listarMovimientos(
+  filtros: FiltrosMovimientos = {},
+): Promise<PaginaMovimientos> {
+  const {
+    tipo = "todos",
+    usuarioUid = "todos",
+    desde = null,
+    hasta = null,
+    cantidad = 12,
+    cursor = null,
+  } = filtros;
+
+  const condiciones: QueryConstraint[] = [];
+  if (tipo !== "todos") condiciones.push(where("tipo", "==", tipo));
+  if (usuarioUid !== "todos") {
+    condiciones.push(where("usuario.uid", "==", usuarioUid));
+  }
+  if (desde) condiciones.push(where("fecha", ">=", Timestamp.fromDate(desde)));
+  if (hasta) condiciones.push(where("fecha", "<", Timestamp.fromDate(hasta)));
+
+  const consulta = query(
+    collection(db, "movimientos"),
+    ...condiciones,
+    orderBy("fecha", "desc"),
+    ...(cursor ? [startAfter(cursor)] : []),
+    limit(cantidad),
+  );
+  const instantanea = await getDocs(consulta);
+  const documentos = instantanea.docs;
+
   return {
     movimientos: documentos.map((documento) =>
       mapearMovimiento(documento.id, documento.data()),

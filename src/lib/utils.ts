@@ -21,3 +21,27 @@ export function formatearFecha(fecha: Date): string {
     timeStyle: "short",
   }).format(fecha);
 }
+
+/** Normaliza texto para búsquedas (sin acentos, en minúsculas). */
+export function normalizarTexto(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Convierte el valor de un `<input type="date">` al inicio del día local.
+ * Con `finExclusivo` devuelve el inicio del día siguiente (rango [desde, hasta)).
+ */
+export function fechaDesdeInput(
+  valor: string,
+  finExclusivo = false,
+): Date | null {
+  if (!valor) return null;
+  const fecha = new Date(`${valor}T00:00:00`);
+  if (Number.isNaN(fecha.getTime())) return null;
+  if (finExclusivo) fecha.setDate(fecha.getDate() + 1);
+  return fecha;
+}
