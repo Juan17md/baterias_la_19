@@ -105,10 +105,6 @@ export function ModuloUsuarios() {
         <PageHeader
           titulo="Usuarios"
           descripcion="Gestión de usuarios del sistema: altas, roles y activación (solo administradores)."
-          breadcrumbs={[
-            { etiqueta: "Dashboard", href: "/dashboard" },
-            { etiqueta: "Usuarios" },
-          ]}
         />
         <EmptyState
           icono={ShieldAlert}
@@ -243,10 +239,6 @@ export function ModuloUsuarios() {
       <PageHeader
         titulo="Usuarios"
         descripcion="Gestiona las cuentas del sistema: crea usuarios, asigna roles y controla su acceso."
-        breadcrumbs={[
-          { etiqueta: "Dashboard", href: "/dashboard" },
-          { etiqueta: "Usuarios" },
-        ]}
         acciones={
           <Button onClick={() => setDialogoAltaAbierto(true)}>
             <UserPlus className="size-4" aria-hidden="true" />

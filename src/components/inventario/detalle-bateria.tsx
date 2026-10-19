@@ -39,7 +39,7 @@ import type { Bateria, Movimiento, TipoMovimiento } from "@/types";
 import { BadgeEstadoStock } from "./badge-estado-stock";
 import { DialogoAjuste } from "./dialogo-ajuste";
 import { DialogoEntrada } from "./dialogo-entrada";
-import { ETIQUETAS_TIPO_BATERIA, ETIQUETAS_TIPO_MOVIMIENTO } from "./etiquetas";
+import { ETIQUETAS_TIPO_MOVIMIENTO } from "./etiquetas";
 import { FormularioBateria } from "./formulario-bateria";
 import { PrecioDual } from "./precio-dual";
 
@@ -205,14 +205,7 @@ export function DetalleBateria({ id }: { id: string }) {
   if (cargando) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader
-          titulo="Detalle de batería"
-          breadcrumbs={[
-            { etiqueta: "Dashboard", href: "/dashboard" },
-            { etiqueta: "Inventario", href: "/dashboard/inventario" },
-            { etiqueta: "Detalle" },
-          ]}
-        />
+        <PageHeader titulo="Detalle de batería" />
         <div className="grid gap-6 lg:grid-cols-2">
           {Array.from({ length: 2 }).map((_, indice) => (
             <Card key={indice} className="flex flex-col gap-3 p-6">
@@ -236,14 +229,7 @@ export function DetalleBateria({ id }: { id: string }) {
   if (!bateria) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader
-          titulo="Detalle de batería"
-          breadcrumbs={[
-            { etiqueta: "Dashboard", href: "/dashboard" },
-            { etiqueta: "Inventario", href: "/dashboard/inventario" },
-            { etiqueta: "Detalle" },
-          ]}
-        />
+        <PageHeader titulo="Detalle de batería" />
         <EmptyState
           icono={noEncontrada ? PackageX : TriangleAlert}
           titulo={
@@ -288,12 +274,7 @@ export function DetalleBateria({ id }: { id: string }) {
     <div className="flex flex-col gap-6">
       <PageHeader
         titulo={`${bateria.marca} ${bateria.modelo}`}
-        descripcion={`Código ${bateria.codigo} · ${ETIQUETAS_TIPO_BATERIA[bateria.tipo]}`}
-        breadcrumbs={[
-          { etiqueta: "Dashboard", href: "/dashboard" },
-          { etiqueta: "Inventario", href: "/dashboard/inventario" },
-          { etiqueta: bateria.codigo },
-        ]}
+        descripcion={`Código ${bateria.codigo}`}
         acciones={
           <>
             <Button
@@ -347,18 +328,10 @@ export function DetalleBateria({ id }: { id: string }) {
                 />
               </span>
             </FilaDato>
-            <FilaDato etiqueta="Tipo">
-              {ETIQUETAS_TIPO_BATERIA[bateria.tipo]}
-            </FilaDato>
             <FilaDato etiqueta="Voltaje / Amperaje">
               <span className="font-mono">
                 {bateria.voltaje} V · {bateria.amperaje} Ah
               </span>
-            </FilaDato>
-            <FilaDato etiqueta="CCA">{bateria.cca ?? "—"}</FilaDato>
-            <FilaDato etiqueta="Polaridad">{bateria.polaridad ?? "—"}</FilaDato>
-            <FilaDato etiqueta="Dimensiones">
-              {bateria.dimensiones ?? "—"}
             </FilaDato>
             <FilaDato etiqueta="Proveedor">{bateria.proveedor ?? "—"}</FilaDato>
             <FilaDato etiqueta="Garantía">

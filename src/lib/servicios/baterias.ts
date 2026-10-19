@@ -17,19 +17,12 @@ import { db } from "@/lib/firebase/configuracion";
 import {
   esquemaDatosBateria,
   esquemaNuevaBateria,
-  TIPOS_BATERIA,
   type DatosBateria,
   type DatosNuevaBateria,
 } from "@/lib/validaciones/baterias";
-import type {
-  Bateria,
-  EstadoStock,
-  ResumenUsuario,
-  TipoBateria,
-} from "@/types";
+import type { Bateria, EstadoStock, ResumenUsuario } from "@/types";
 
 const COLECCION = "baterias";
-const TIPOS_VALIDOS = new Set<string>(TIPOS_BATERIA);
 
 /** `stock <= stockMinimo` (campo denormalizado del documento). */
 export function calcularStockBajo(stock: number, stockMinimo: number): boolean {
@@ -46,20 +39,13 @@ export function calcularEstadoStock(
 }
 
 function mapearBateria(id: string, datos: Record<string, unknown>): Bateria {
-  const tipo = String(datos.tipo ?? "");
   return {
     id,
     codigo: String(datos.codigo ?? ""),
     marca: String(datos.marca ?? ""),
     modelo: String(datos.modelo ?? ""),
-    tipo: (TIPOS_VALIDOS.has(tipo)
-      ? tipo
-      : "libre_mantenimiento") as TipoBateria,
     voltaje: Number(datos.voltaje ?? 0),
     amperaje: Number(datos.amperaje ?? 0),
-    cca: datos.cca == null ? null : Number(datos.cca),
-    polaridad: datos.polaridad == null ? null : String(datos.polaridad),
-    dimensiones: datos.dimensiones == null ? null : String(datos.dimensiones),
     precioCompra: Number(datos.precioCompra ?? 0),
     precioVenta: Number(datos.precioVenta ?? 0),
     stock: Number(datos.stock ?? 0),
@@ -115,12 +101,8 @@ function armarCampos(datos: DatosBateria) {
     codigo: datos.codigo,
     marca: datos.marca,
     modelo: datos.modelo,
-    tipo: datos.tipo,
     voltaje: datos.voltaje,
     amperaje: datos.amperaje,
-    cca: datos.cca ?? null,
-    polaridad: datos.polaridad ?? null,
-    dimensiones: datos.dimensiones ?? null,
     precioCompra: datos.precioCompra,
     precioVenta: datos.precioVenta,
     stockMinimo: datos.stockMinimo,

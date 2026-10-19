@@ -24,10 +24,6 @@ export type TasaBCV = {
   actualizadoPor: { uid: string; nombre: string } | null;
 };
 
-/** Tecnologías de batería manejadas en el catálogo. */
-export type TipoBateria =
-  "libre_mantenimiento" | "humeda" | "agm" | "gel" | "efb";
-
 /** Estado de stock derivado de `stock` y `stockMinimo` (06_Design_System §3.3). */
 export type EstadoStock = "en_stock" | "bajo" | "agotado";
 
@@ -40,12 +36,8 @@ export type Bateria = {
   codigo: string;
   marca: string;
   modelo: string;
-  tipo: TipoBateria;
   voltaje: number;
   amperaje: number;
-  cca: number | null;
-  polaridad: string | null;
-  dimensiones: string | null;
   precioCompra: number;
   precioVenta: number;
   stock: number;

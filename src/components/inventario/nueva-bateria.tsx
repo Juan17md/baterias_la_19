@@ -43,11 +43,6 @@ export function NuevaBateria() {
       <PageHeader
         titulo="Nueva batería"
         descripcion="Registra un producto del catálogo. Los precios van en $ y verás su referencia en Bs con la tasa vigente."
-        breadcrumbs={[
-          { etiqueta: "Dashboard", href: "/dashboard" },
-          { etiqueta: "Inventario", href: "/dashboard/inventario" },
-          { etiqueta: "Nueva batería" },
-        ]}
       />
       <Card className="p-6">
         <FormularioBateria

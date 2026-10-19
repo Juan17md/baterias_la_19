@@ -85,7 +85,6 @@ async function sembrarBase() {
       codigo: "BL19-0001",
       marca: "Willard",
       modelo: "W-500",
-      tipo: "libre_mantenimiento",
       voltaje: 12,
       amperaje: 60,
       precioCompra: 50,

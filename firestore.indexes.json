@@ -40,14 +40,6 @@
         { "fieldPath": "stockBajo", "order": "ASCENDING" },
         { "fieldPath": "marca", "order": "ASCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "baterias",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "activo", "order": "ASCENDING" },
-        { "fieldPath": "tipo", "order": "ASCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []

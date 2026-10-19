@@ -11,10 +11,6 @@ export default function PaginaHistorial() {
       <PageHeader
         titulo="Historial"
         descripcion="Ventas y movimientos de inventario, con filtros por fecha, tipo y usuario."
-        breadcrumbs={[
-          { etiqueta: "Dashboard", href: "/dashboard" },
-          { etiqueta: "Historial" },
-        ]}
       />
       <EmptyState
         icono={History}

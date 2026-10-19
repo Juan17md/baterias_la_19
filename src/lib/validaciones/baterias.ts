@@ -1,14 +1,4 @@
 import { z } from "zod";
-import type { TipoBateria } from "@/types";
-
-/** Tipos de batería disponibles (selects, filtros y validación). */
-export const TIPOS_BATERIA: TipoBateria[] = [
-  "libre_mantenimiento",
-  "humeda",
-  "agm",
-  "gel",
-  "efb",
-];
 
 /** Convierte texto de formularios a número (acepta coma decimal). */
 function aNumero(valor: unknown): unknown {
@@ -24,19 +14,6 @@ const numeroPositivo = (mensaje: string) =>
 
 const enteroNoNegativo = (mensaje: string) =>
   z.preprocess(aNumero, z.int({ error: mensaje }).min(0, mensaje));
-
-const numeroOpcional = z.preprocess(
-  (valor) => {
-    const convertido = aNumero(valor);
-    return typeof convertido === "number" && Number.isNaN(convertido)
-      ? undefined
-      : convertido;
-  },
-  z
-    .number({ error: "Debe ser un número válido" })
-    .positive("Debe ser mayor a cero")
-    .optional(),
-);
 
 const textoOpcional = (maximo: number, mensaje: string) =>
   z.preprocess(
@@ -63,14 +40,8 @@ export const esquemaDatosBateria = z.object({
     .trim()
     .min(1, "El modelo es obligatorio")
     .max(80, "Máximo 80 caracteres"),
-  tipo: z.enum(["libre_mantenimiento", "humeda", "agm", "gel", "efb"], {
-    error: "Selecciona el tipo de batería",
-  }),
   voltaje: numeroPositivo("Indica el voltaje en voltios (ej. 12)"),
   amperaje: numeroPositivo("Indica el amperaje en Ah (ej. 600)"),
-  cca: numeroOpcional,
-  polaridad: textoOpcional(60, "Máximo 60 caracteres"),
-  dimensiones: textoOpcional(60, "Máximo 60 caracteres"),
   precioCompra: z.preprocess(
     aNumero,
     z

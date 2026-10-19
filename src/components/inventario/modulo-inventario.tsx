@@ -43,10 +43,8 @@ import {
   listarBaterias,
 } from "@/lib/servicios/baterias";
 import { cn } from "@/lib/utils";
-import { TIPOS_BATERIA } from "@/lib/validaciones/baterias";
-import type { Bateria, EstadoStock, TipoBateria } from "@/types";
+import type { Bateria, EstadoStock } from "@/types";
 import { BadgeEstadoStock } from "./badge-estado-stock";
-import { ETIQUETAS_TIPO_BATERIA } from "./etiquetas";
 import { PrecioDual } from "./precio-dual";
 
 const BATERIAS_POR_PAGINA = 12;
@@ -92,7 +90,6 @@ export function ModuloInventario() {
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroMarca, setFiltroMarca] = useState("todas");
-  const [filtroTipo, setFiltroTipo] = useState<"todos" | TipoBateria>("todos");
   const [filtroStock, setFiltroStock] = useState<FiltroEstadoStock>("todos");
   const [filtroEstado, setFiltroEstado] =
     useState<FiltroEstadoProducto>("activos");
@@ -136,7 +133,6 @@ export function ModuloInventario() {
     if (filtroEstado === "activos" && !bateria.activo) return false;
     if (filtroEstado === "desactivados" && bateria.activo) return false;
     if (filtroMarca !== "todas" && bateria.marca !== filtroMarca) return false;
-    if (filtroTipo !== "todos" && bateria.tipo !== filtroTipo) return false;
     if (
       filtroStock !== "todos" &&
       calcularEstadoStock(bateria.stock, bateria.stockMinimo) !== filtroStock
@@ -188,14 +184,12 @@ export function ModuloInventario() {
   const hayFiltrosActivos =
     busqueda.trim() !== "" ||
     filtroMarca !== "todas" ||
-    filtroTipo !== "todos" ||
     filtroStock !== "todos" ||
     filtroEstado !== "activos";
 
   function limpiarFiltros() {
     setBusqueda("");
     setFiltroMarca("todas");
-    setFiltroTipo("todos");
     setFiltroStock("todos");
     setFiltroEstado("activos");
     setPagina(1);
@@ -228,10 +222,6 @@ export function ModuloInventario() {
       <PageHeader
         titulo="Inventario"
         descripcion="Catálogo de baterías: stock, precios en $ con referencia en Bs y estado de reposición."
-        breadcrumbs={[
-          { etiqueta: "Dashboard", href: "/dashboard" },
-          { etiqueta: "Inventario" },
-        ]}
         acciones={
           <>
             <Button
@@ -321,28 +311,6 @@ export function ModuloInventario() {
                   {marcas.map((marca) => (
                     <SelectItem key={marca} value={marca}>
                       {marca}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filtroTipo}
-                onValueChange={(valor) => {
-                  setFiltroTipo(valor as "todos" | TipoBateria);
-                  setPagina(1);
-                }}
-              >
-                <SelectTrigger
-                  className="w-full sm:w-44"
-                  aria-label="Filtrar por tipo"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos los tipos</SelectItem>
-                  {TIPOS_BATERIA.map((tipo) => (
-                    <SelectItem key={tipo} value={tipo}>
-                      {ETIQUETAS_TIPO_BATERIA[tipo]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -524,9 +492,6 @@ export function ModuloInventario() {
                                 {bateria.modelo}
                               </span>
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {ETIQUETAS_TIPO_BATERIA[bateria.tipo]}
-                            </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -534,9 +499,6 @@ export function ModuloInventario() {
                             <span>
                               {bateria.voltaje} V · {bateria.amperaje} Ah
                             </span>
-                            {bateria.cca !== null ? (
-                              <span>CCA {bateria.cca}</span>
-                            ) : null}
                           </div>
                         </td>
                         <td className="px-4 py-3">

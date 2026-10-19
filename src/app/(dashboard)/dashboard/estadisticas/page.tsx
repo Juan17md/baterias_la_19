@@ -11,10 +11,6 @@ export default function PaginaEstadisticas() {
       <PageHeader
         titulo="Estadísticas"
         descripcion="KPIs y gráficos por rango de fechas: ingresos, unidades vendidas, ticket promedio y métodos de pago."
-        breadcrumbs={[
-          { etiqueta: "Dashboard", href: "/dashboard" },
-          { etiqueta: "Estadísticas" },
-        ]}
       />
       <EmptyState
         icono={BarChart3}

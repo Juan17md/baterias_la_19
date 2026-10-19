@@ -3,35 +3,22 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useTasa } from "@/hooks/use-tasa";
 import {
   esquemaDatosBateria,
   esquemaNuevaBateria,
-  TIPOS_BATERIA,
   type DatosBateria,
   type DatosNuevaBateria,
 } from "@/lib/validaciones/baterias";
 import { formatearNumero } from "@/lib/utils";
-import type { Bateria, TipoBateria } from "@/types";
-import { ETIQUETAS_TIPO_BATERIA } from "./etiquetas";
+import type { Bateria } from "@/types";
 
 type FormularioEstado = {
   codigo: string;
   marca: string;
   modelo: string;
-  tipo: TipoBateria;
   voltaje: string;
   amperaje: string;
-  cca: string;
-  polaridad: string;
-  dimensiones: string;
   precioCompra: string;
   precioVenta: string;
   stockInicial: string;
@@ -44,12 +31,8 @@ const ESTADO_INICIAL: FormularioEstado = {
   codigo: "",
   marca: "",
   modelo: "",
-  tipo: "libre_mantenimiento",
   voltaje: "12",
   amperaje: "",
-  cca: "",
-  polaridad: "",
-  dimensiones: "",
   precioCompra: "",
   precioVenta: "",
   stockInicial: "0",
@@ -63,12 +46,8 @@ function desdeBateria(bateria: Bateria): FormularioEstado {
     codigo: bateria.codigo,
     marca: bateria.marca,
     modelo: bateria.modelo,
-    tipo: bateria.tipo,
     voltaje: String(bateria.voltaje),
     amperaje: String(bateria.amperaje),
-    cca: bateria.cca === null ? "" : String(bateria.cca),
-    polaridad: bateria.polaridad ?? "",
-    dimensiones: bateria.dimensiones ?? "",
     precioCompra: String(bateria.precioCompra),
     precioVenta: String(bateria.precioVenta),
     stockInicial: "0",
@@ -246,31 +225,6 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
             error={errores.modelo}
             marcador="Ej. W60038"
           />
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="bateria-tipo" className="text-xs font-medium">
-              Tipo (tecnología)
-            </label>
-            <Select
-              value={estado.tipo}
-              onValueChange={(valor) =>
-                actualizarCampo("tipo", valor as TipoBateria)
-              }
-            >
-              <SelectTrigger id="bateria-tipo" aria-label="Tipo de batería">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIPOS_BATERIA.map((tipo) => (
-                  <SelectItem key={tipo} value={tipo}>
-                    {ETIQUETAS_TIPO_BATERIA[tipo]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errores.tipo ? (
-              <p className="text-xs text-destructive-text">{errores.tipo}</p>
-            ) : null}
-          </div>
           <CampoTexto
             id="bateria-voltaje"
             etiqueta="Voltaje (V)"
@@ -288,37 +242,6 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
             error={errores.amperaje}
             marcador="Ej. 600"
             inputMode="decimal"
-          />
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold">Especificaciones físicas</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <CampoTexto
-            id="bateria-cca"
-            etiqueta="CCA (opcional)"
-            valor={estado.cca}
-            onChange={(valor) => actualizarCampo("cca", valor)}
-            error={errores.cca}
-            marcador="Ej. 480"
-            inputMode="decimal"
-          />
-          <CampoTexto
-            id="bateria-polaridad"
-            etiqueta="Polaridad (opcional)"
-            valor={estado.polaridad}
-            onChange={(valor) => actualizarCampo("polaridad", valor)}
-            error={errores.polaridad}
-            marcador="Ej. Positivo derecha"
-          />
-          <CampoTexto
-            id="bateria-dimensiones"
-            etiqueta="Dimensiones (opcional)"
-            valor={estado.dimensiones}
-            onChange={(valor) => actualizarCampo("dimensiones", valor)}
-            error={errores.dimensiones}
-            marcador="Ej. 23 x 17 x 20 cm"
           />
         </div>
       </section>
