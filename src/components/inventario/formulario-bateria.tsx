@@ -215,7 +215,7 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
             valor={estado.marca}
             onChange={(valor) => actualizarCampo("marca", valor)}
             error={errores.marca}
-            marcador="Ej. Willard"
+            marcador="Ej. Duncan"
           />
           <CampoTexto
             id="bateria-modelo"
