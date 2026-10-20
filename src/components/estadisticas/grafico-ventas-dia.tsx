@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatearNumero, formatearNumeroCompacto } from "@/lib/utils";
+import { formatearNumero } from "@/lib/utils";
 import type { PuntoVentasDia } from "@/types";
 
 const ANCHO = 720;
@@ -20,32 +20,24 @@ const MARGEN = { arriba: 20, derecha: 16, abajo: 34, izquierda: 58 };
 const ANCHO_UTIL = ANCHO - MARGEN.izquierda - MARGEN.derecha;
 const ALTO_UTIL = ALTO - MARGEN.arriba - MARGEN.abajo;
 
-/** Redondea el máximo del eje a 1, 2, 5 o 10 veces una potencia de diez. */
-function maximoBonito(valor: number): number {
-  if (valor <= 0) return 1;
-  const exponente = Math.floor(Math.log10(valor));
-  const base = 10 ** exponente;
-  const fraccion = valor / base;
-  const factor = fraccion <= 1 ? 1 : fraccion <= 2 ? 2 : fraccion <= 5 ? 5 : 10;
-  return factor * base;
+/** Calcula una escala entera con cuatro divisiones para el eje de ventas. */
+function escalaVentas(valor: number): number {
+  return Math.max(4, Math.ceil(valor / 4) * 4);
 }
 
 type Props = {
   serie: PuntoVentasDia[];
 };
 
-/** Gráfico de ingresos por día con detalle tabular accesible. */
+/** Gráfico de ventas por día con detalle tabular accesible. */
 export function GraficoVentasDia({ serie }: Props) {
   const [mostrarTabla, setMostrarTabla] = useState(false);
-  const maximo = maximoBonito(
-    Math.max(...serie.map((punto) => punto.totalUsd), 0),
+  const maximo = escalaVentas(
+    Math.max(...serie.map((punto) => punto.ventas), 0),
   );
   const baseY = MARGEN.arriba + ALTO_UTIL;
   const paso = Math.max(1, Math.ceil(serie.length / 7));
-  const total = serie.reduce(
-    (acumulado, punto) => acumulado + punto.totalUsd,
-    0,
-  );
+  const total = serie.reduce((acumulado, punto) => acumulado + punto.ventas, 0);
   const hayDatos = total > 0;
 
   const puntos = serie.map((punto, indice) => {
@@ -53,7 +45,7 @@ export function GraficoVentasDia({ serie }: Props) {
       serie.length === 1
         ? MARGEN.izquierda + ANCHO_UTIL / 2
         : MARGEN.izquierda + (indice / (serie.length - 1)) * ANCHO_UTIL;
-    const y = baseY - (punto.totalUsd / maximo) * ALTO_UTIL;
+    const y = baseY - (punto.ventas / maximo) * ALTO_UTIL;
     return { ...punto, x, y };
   });
 
@@ -81,9 +73,9 @@ export function GraficoVentasDia({ serie }: Props) {
     <Card>
       <CardHeader className="flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1.5">
-          <CardTitle>Ingresos por día</CardTitle>
+          <CardTitle>Ventas por día</CardTitle>
           <CardDescription>
-            Ventas completadas en el período seleccionado.
+            Cantidad de ventas completadas en el período seleccionado.
           </CardDescription>
         </div>
         <Button
@@ -105,11 +97,11 @@ export function GraficoVentasDia({ serie }: Props) {
                 viewBox={`0 0 ${ANCHO} ${ALTO}`}
                 className="h-auto w-full min-w-[640px]"
                 role="img"
-                aria-label={`Ingresos por día del período: ${formatearNumero(total)} dólares en ${serie.length} días.`}
+                aria-label={`Ventas por día del período: ${formatearNumero(total, 0)} ventas en ${serie.length} días.`}
               >
                 <defs>
                   <linearGradient
-                    id="degradado-ingresos"
+                    id="degradado-ventas"
                     x1="0"
                     y1="0"
                     x2="0"
@@ -146,14 +138,14 @@ export function GraficoVentasDia({ serie }: Props) {
                         fill="var(--muted-foreground)"
                         fontSize={10}
                       >
-                        {formatearNumeroCompacto(tick.valor)}
+                        {formatearNumero(tick.valor, 0)}
                       </text>
                     </g>
                   ))}
 
                   {puntos.length > 1 ? (
                     <>
-                      <path d={area} fill="url(#degradado-ingresos)" />
+                      <path d={area} fill="url(#degradado-ventas)" />
                       <path
                         d={linea}
                         fill="none"
@@ -188,7 +180,7 @@ export function GraficoVentasDia({ serie }: Props) {
                         />
                       )}
                       <title>
-                        {`${punto.etiqueta}: $ ${formatearNumero(punto.totalUsd)} · ${punto.ventas} ventas · ${punto.unidades} unidades`}
+                        {`${punto.etiqueta}: ${punto.ventas} ventas · ${punto.unidades} unidades · $ ${formatearNumero(punto.totalUsd)}`}
                       </title>
                     </g>
                   ))}
@@ -278,7 +270,7 @@ export function GraficoVentasDia({ serie }: Props) {
         ) : (
           <EmptyState
             icono={BarChart3}
-            titulo="Sin ingresos en el período"
+            titulo="Sin ventas en el período"
             descripcion="No hay ventas completadas para las fechas seleccionadas."
           />
         )}
