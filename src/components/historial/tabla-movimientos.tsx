@@ -236,7 +236,10 @@ export function TablaMovimientos() {
           />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
+          <p
+            role={rangoInvalido ? "alert" : "status"}
+            className="text-xs text-muted-foreground"
+          >
             {rangoInvalido
               ? "La fecha «desde» no puede ser posterior a «hasta»."
               : `Mostrando ${movimientos.length} movimiento(s) cargado(s).`}
@@ -257,7 +260,7 @@ export function TablaMovimientos() {
       </Card>
 
       {rangoInvalido ? (
-        <Card className="p-6 text-sm text-muted-foreground">
+        <Card role="alert" className="p-6 text-sm text-muted-foreground">
           Corrige el rango de fechas para consultar los movimientos.
         </Card>
       ) : cargando ? (
@@ -298,17 +301,38 @@ export function TablaMovimientos() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">
+                Movimientos de inventario con fecha, tipo, batería, cantidad,
+                stock, motivo y usuario
+              </caption>
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">Fecha</th>
-                  <th className="px-4 py-3 font-medium">Tipo</th>
-                  <th className="px-4 py-3 font-medium">Batería</th>
-                  <th className="px-4 py-3 text-right font-medium">Cantidad</th>
-                  <th className="px-4 py-3 font-medium">Stock</th>
-                  <th className="px-4 py-3 font-medium">Motivo</th>
-                  <th className="px-4 py-3 font-medium">Usuario</th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Fecha
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Tipo
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Batería
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">
+                    Cantidad
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Stock
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Motivo
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Usuario
+                  </th>
                   {esAdmin ? (
-                    <th className="px-4 py-3 text-right font-medium">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-right font-medium"
+                    >
                       <span className="sr-only">Acciones</span>
                     </th>
                   ) : null}
@@ -334,7 +358,7 @@ export function TablaMovimientos() {
                       <div className="flex flex-col">
                         <Link
                           href={`/dashboard/inventario/${movimiento.bateriaId}`}
-                          className="font-mono text-xs font-medium hover:text-primary hover:underline"
+                          className="font-mono text-xs font-medium hover:text-primary-text hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
                         >
                           {movimiento.bateriaResumen.codigo || "—"}
                         </Link>
@@ -367,7 +391,7 @@ export function TablaMovimientos() {
                       {movimiento.ventaId ? (
                         <Link
                           href={`/dashboard/historial/venta/${movimiento.ventaId}`}
-                          className="text-xs text-primary hover:underline"
+                          className="text-xs text-primary-text hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
                         >
                           Ver venta
                         </Link>

@@ -33,7 +33,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTasa } from "@/hooks/use-tasa";
 import { listarBaterias } from "@/lib/servicios/baterias";
 import { registrarVenta, type ResultadoVenta } from "@/lib/servicios/ventas";
-import { formatearNumero, normalizarTexto } from "@/lib/utils";
+import {
+  enfocarPrimerCampoInvalido,
+  formatearNumero,
+  normalizarTexto,
+} from "@/lib/utils";
 import { esquemaVenta, METODOS_PAGO } from "@/lib/validaciones/ventas";
 import type { Bateria, MetodoPago } from "@/types";
 import { ETIQUETAS_METODO_PAGO } from "./etiquetas";
@@ -217,6 +221,7 @@ export function DialogoRegistrarVenta({
     evento.preventDefault();
     if (guardando || !perfil) return;
 
+    const formulario = evento.currentTarget;
     const validado = esquemaVenta.safeParse({
       items: lineas.map((linea) => ({
         bateriaId: linea.bateria.id,
@@ -237,12 +242,14 @@ export function DialogoRegistrarVenta({
         if (campo && !nuevos[campo]) nuevos[campo] = problema.message;
       }
       setErrores(nuevos);
+      enfocarPrimerCampoInvalido(formulario);
       return;
     }
     if (descuentoExcedido) {
       setErrores({
         descuento: "El descuento no puede superar el subtotal.",
       });
+      enfocarPrimerCampoInvalido(formulario);
       return;
     }
 
@@ -270,7 +277,7 @@ export function DialogoRegistrarVenta({
 
   return (
     <Dialog open={abierto} onOpenChange={manejarCambio}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         {resultado ? (
           <>
             <DialogHeader className="sr-only">
@@ -353,6 +360,8 @@ export function DialogoRegistrarVenta({
                   />
                   <Input
                     id="venta-buscar"
+                    name="busqueda"
+                    type="search"
                     value={busqueda}
                     onChange={(evento) => setBusqueda(evento.target.value)}
                     placeholder="Código, marca o modelo…"
@@ -360,6 +369,11 @@ export function DialogoRegistrarVenta({
                     className="pl-9"
                   />
                 </div>
+                <p className="sr-only" role="status">
+                  {cargandoBaterias
+                    ? "Cargando inventario"
+                    : `${resultados.length} resultados disponibles`}
+                </p>
                 <div className="max-h-48 overflow-y-auto rounded-md border border-border">
                   {cargandoBaterias ? (
                     <p className="px-3 py-3 text-sm text-muted-foreground">
@@ -438,19 +452,34 @@ export function DialogoRegistrarVenta({
                 ) : (
                   <div className="overflow-x-auto rounded-md border border-border">
                     <table className="w-full text-sm">
+                      <caption className="sr-only">
+                        Baterías incluidas en la venta, con precio, cantidad y
+                        subtotal
+                      </caption>
                       <thead>
                         <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-                          <th className="px-3 py-2 font-medium">Batería</th>
-                          <th className="px-3 py-2 text-right font-medium">
+                          <th scope="col" className="px-3 py-2 font-medium">
+                            Batería
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-right font-medium"
+                          >
                             Precio
                           </th>
-                          <th className="px-3 py-2 text-center font-medium">
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-center font-medium"
+                          >
                             Cantidad
                           </th>
-                          <th className="px-3 py-2 text-right font-medium">
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-right font-medium"
+                          >
                             Subtotal
                           </th>
-                          <th className="px-3 py-2">
+                          <th scope="col" className="px-3 py-2">
                             <span className="sr-only">Acciones</span>
                           </th>
                         </tr>
@@ -541,7 +570,11 @@ export function DialogoRegistrarVenta({
                   </div>
                 )}
                 {errores.items ? (
-                  <p className="text-xs text-destructive-text">
+                  <p
+                    id="venta-items-error"
+                    role="alert"
+                    className="text-xs text-destructive-text"
+                  >
                     {errores.items}
                   </p>
                 ) : null}
@@ -557,6 +590,7 @@ export function DialogoRegistrarVenta({
                   </label>
                   <Input
                     id="venta-descuento"
+                    name="descuento"
                     value={descuento}
                     onChange={(evento) => {
                       setDescuento(evento.target.value);
@@ -571,13 +605,26 @@ export function DialogoRegistrarVenta({
                     aria-invalid={
                       errores.descuento || descuentoExcedido ? true : undefined
                     }
+                    aria-describedby={
+                      errores.descuento || descuentoExcedido
+                        ? "venta-descuento-error"
+                        : undefined
+                    }
                   />
                   {errores.descuento ? (
-                    <p className="text-xs text-destructive-text">
+                    <p
+                      id="venta-descuento-error"
+                      role="alert"
+                      className="text-xs text-destructive-text"
+                    >
                       {errores.descuento}
                     </p>
                   ) : descuentoExcedido ? (
-                    <p className="text-xs text-destructive-text">
+                    <p
+                      id="venta-descuento-error"
+                      role="alert"
+                      className="text-xs text-destructive-text"
+                    >
                       El descuento no puede superar el subtotal.
                     </p>
                   ) : null}
@@ -640,6 +687,7 @@ export function DialogoRegistrarVenta({
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
+                      name="incluyeInstalacion"
                       className="size-4 rounded border-border accent-primary"
                       checked={incluyeInstalacion}
                       onChange={(evento) =>
@@ -651,6 +699,7 @@ export function DialogoRegistrarVenta({
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
+                      name="recibioBateriaUsada"
                       className="size-4 rounded border-border accent-primary"
                       checked={recibioBateriaUsada}
                       onChange={(evento) =>
@@ -672,6 +721,7 @@ export function DialogoRegistrarVenta({
                   </label>
                   <Input
                     id="venta-cliente"
+                    name="cliente"
                     value={clienteNombre}
                     onChange={(evento) => {
                       setClienteNombre(evento.target.value);
@@ -683,9 +733,16 @@ export function DialogoRegistrarVenta({
                     placeholder="Ej. Juan Pérez"
                     autoComplete="off"
                     aria-invalid={errores.clienteNombre ? true : undefined}
+                    aria-describedby={
+                      errores.clienteNombre ? "venta-cliente-error" : undefined
+                    }
                   />
                   {errores.clienteNombre ? (
-                    <p className="text-xs text-destructive-text">
+                    <p
+                      id="venta-cliente-error"
+                      role="alert"
+                      className="text-xs text-destructive-text"
+                    >
                       {errores.clienteNombre}
                     </p>
                   ) : null}
@@ -699,13 +756,14 @@ export function DialogoRegistrarVenta({
                   </label>
                   <Input
                     id="venta-telefono"
+                    name="telefono"
                     value={clienteTelefono}
                     onChange={(evento) =>
                       setClienteTelefono(evento.target.value)
                     }
                     placeholder="Ej. 0414-1234567"
                     inputMode="tel"
-                    autoComplete="off"
+                    autoComplete="tel"
                   />
                 </div>
               </section>
@@ -716,15 +774,23 @@ export function DialogoRegistrarVenta({
                 </label>
                 <textarea
                   id="venta-notas"
+                  name="notas"
                   value={notas}
                   onChange={(evento) => setNotas(evento.target.value)}
                   rows={2}
                   placeholder="Ej. Instalación a domicilio, observaciones del cliente…"
                   className="flex w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm transition-[border-color,box-shadow] duration-150 outline-none placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive"
                   aria-invalid={errores.notas ? true : undefined}
+                  aria-describedby={
+                    errores.notas ? "venta-notas-error" : undefined
+                  }
                 />
                 {errores.notas ? (
-                  <p className="text-xs text-destructive-text">
+                  <p
+                    id="venta-notas-error"
+                    role="alert"
+                    className="text-xs text-destructive-text"
+                  >
                     {errores.notas}
                   </p>
                 ) : null}

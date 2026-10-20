@@ -5,7 +5,7 @@ import {
   setDoc,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import type { TasaBCV } from "@/types";
 
 const URL_TASA_OFICIAL = "https://ve.dolarapi.com/v1/dolares/oficial";

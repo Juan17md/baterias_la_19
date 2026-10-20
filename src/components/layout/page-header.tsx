@@ -26,7 +26,7 @@ function PageHeader({
           ) : null}
         </div>
         {acciones ? (
-          <div className="flex items-center gap-2">{acciones}</div>
+          <div className="flex flex-wrap items-center gap-2">{acciones}</div>
         ) : null}
       </div>
     </div>

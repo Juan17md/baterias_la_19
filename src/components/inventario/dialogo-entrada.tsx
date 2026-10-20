@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { registrarEntrada } from "@/lib/servicios/baterias";
+import { enfocarPrimerCampoInvalido } from "@/lib/utils";
 import { esquemaEntrada } from "@/lib/validaciones/baterias";
 import type { Bateria } from "@/types";
 
@@ -61,6 +62,7 @@ export function DialogoEntrada({
     evento.preventDefault();
     if (guardando || !perfil) return;
 
+    const formulario = evento.currentTarget;
     const resultado = esquemaEntrada.safeParse({ cantidad, motivo });
     if (!resultado.success) {
       const nuevos: Record<string, string> = {};
@@ -69,6 +71,7 @@ export function DialogoEntrada({
         if (campo && !nuevos[campo]) nuevos[campo] = problema.message;
       }
       setErrores(nuevos);
+      enfocarPrimerCampoInvalido(formulario);
       return;
     }
 
@@ -127,6 +130,7 @@ export function DialogoEntrada({
             </label>
             <Input
               id="entrada-cantidad"
+              name="cantidad"
               value={cantidad}
               onChange={(evento) => {
                 setCantidad(evento.target.value);
@@ -136,9 +140,16 @@ export function DialogoEntrada({
               inputMode="numeric"
               autoComplete="off"
               aria-invalid={errores.cantidad ? true : undefined}
+              aria-describedby={
+                errores.cantidad ? "entrada-cantidad-error" : undefined
+              }
             />
             {errores.cantidad ? (
-              <p className="text-xs text-destructive-text">
+              <p
+                id="entrada-cantidad-error"
+                role="alert"
+                className="text-xs text-destructive-text"
+              >
                 {errores.cantidad}
               </p>
             ) : null}
@@ -149,6 +160,7 @@ export function DialogoEntrada({
             </label>
             <Input
               id="entrada-motivo"
+              name="motivo"
               value={motivo}
               onChange={(evento) => {
                 setMotivo(evento.target.value);
@@ -157,9 +169,18 @@ export function DialogoEntrada({
               placeholder="Ej. Compra a proveedor · Factura 00123"
               autoComplete="off"
               aria-invalid={errores.motivo ? true : undefined}
+              aria-describedby={
+                errores.motivo ? "entrada-motivo-error" : undefined
+              }
             />
             {errores.motivo ? (
-              <p className="text-xs text-destructive-text">{errores.motivo}</p>
+              <p
+                id="entrada-motivo-error"
+                role="alert"
+                className="text-xs text-destructive-text"
+              >
+                {errores.motivo}
+              </p>
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">

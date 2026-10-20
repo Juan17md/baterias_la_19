@@ -16,7 +16,7 @@ import {
   type QueryDocumentSnapshot,
   type Timestamp as TipoTimestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import { calcularStockBajo } from "@/lib/servicios/baterias";
 import {
   esquemaAnulacionVenta,

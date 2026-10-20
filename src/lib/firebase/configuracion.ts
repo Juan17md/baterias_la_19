@@ -5,11 +5,6 @@ import {
   type FirebaseOptions,
 } from "firebase/app";
 import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
-import {
-  connectFirestoreEmulator,
-  getFirestore,
-  type Firestore,
-} from "firebase/firestore";
 
 /**
  * Configuración pública de la app web Firebase (proyecto bateriasla19).
@@ -25,34 +20,33 @@ export const configuracionFirebase: FirebaseOptions = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(configuracionFirebase);
+/** Instancia única de la app Firebase compartida por Auth y Firestore. */
+export const app = getApps().length
+  ? getApp()
+  : initializeApp(configuracionFirebase);
 
 /** Instancia única de Authentication para el cliente. */
 export const auth: Auth = getAuth(app);
-
-/** Instancia única de Firestore para el cliente. */
-export const db: Firestore = getFirestore(app);
 
 /** Indica si la app debe hablar con los emuladores locales (`NEXT_PUBLIC_FIREBASE_EMULADORES=true`). */
 export const usarEmuladores =
   process.env.NEXT_PUBLIC_FIREBASE_EMULADORES === "true";
 
 /**
- * Conecta Auth y Firestore a los emuladores locales (solo en el navegador y
- * cuando la bandera está activa). La bandera en `globalThis` evita conexiones
- * duplicadas durante el hot-reload de desarrollo.
+ * Conecta Auth al emulador local (solo en el navegador y cuando la bandera
+ * está activa). La bandera en `globalThis` evita conexiones duplicadas durante
+ * el hot-reload de desarrollo.
  */
-function conectarEmuladores(): void {
+function conectarEmuladorAuth(): void {
   if (!usarEmuladores || typeof window === "undefined") return;
 
   const bandera = globalThis as typeof globalThis & {
-    __emuladoresFirebaseConectados?: boolean;
+    __emuladorAuthConectado?: boolean;
   };
-  if (bandera.__emuladoresFirebaseConectados) return;
+  if (bandera.__emuladorAuthConectado) return;
 
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  connectFirestoreEmulator(db, "127.0.0.1", 8080);
-  bandera.__emuladoresFirebaseConectados = true;
+  bandera.__emuladorAuthConectado = true;
 }
 
-conectarEmuladores();
+conectarEmuladorAuth();

@@ -12,7 +12,7 @@ import {
   type QueryConstraint,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import { calcularStockBajo } from "@/lib/servicios/baterias";
 import type { Movimiento, TipoMovimiento } from "@/types";
 

@@ -13,7 +13,7 @@ import {
   where,
   type Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import {
   esquemaDatosBateria,
   esquemaNuevaBateria,

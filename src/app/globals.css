@@ -20,12 +20,13 @@
 
   /* Texto */
   --foreground: #09090b;
-  --muted-foreground: #71717a;
+  --muted-foreground: #6b6b73;
 
   /* Marca */
   --primary: #1e40af;
   --primary-hover: #1d4ed8;
   --primary-foreground: #ffffff;
+  --primary-text: #1e40af;
   --brand-red: #9e2e2a;
 
   /* Estados */
@@ -36,6 +37,7 @@
   --destructive: #dc2626;
   --destructive-text: #b91c1c;
   --info: #2563eb;
+  --info-text: #2563eb;
 }
 
 .dark {
@@ -53,6 +55,7 @@
   --primary: #2563eb;
   --primary-hover: #3b82f6;
   --primary-foreground: #ffffff;
+  --primary-text: #60a5fa;
   --brand-red: #d1453e;
 
   --success: #22c55e;
@@ -62,6 +65,7 @@
   --destructive: #ef4444;
   --destructive-text: #f87171;
   --info: #3b82f6;
+  --info-text: #60a5fa;
 }
 
 @theme inline {
@@ -76,6 +80,7 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-text: var(--primary-text);
   --color-brand-red: var(--brand-red);
   --color-success: var(--success);
   --color-success-text: var(--success-text);
@@ -84,6 +89,7 @@
   --color-destructive: var(--destructive);
   --color-destructive-text: var(--destructive-text);
   --color-info: var(--info);
+  --color-info-text: var(--info-text);
 
   /* Tipografía (variables generadas por next/font en src/app/layout.tsx) */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;

@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { ajustarStock } from "@/lib/servicios/baterias";
+import { enfocarPrimerCampoInvalido } from "@/lib/utils";
 import { esquemaAjuste } from "@/lib/validaciones/baterias";
 import type { Bateria } from "@/types";
 
@@ -60,6 +61,7 @@ export function DialogoAjuste({
     evento.preventDefault();
     if (guardando || !perfil) return;
 
+    const formulario = evento.currentTarget;
     const resultado = esquemaAjuste.safeParse({ nuevoStock, motivo });
     if (!resultado.success) {
       const nuevos: Record<string, string> = {};
@@ -68,6 +70,7 @@ export function DialogoAjuste({
         if (campo && !nuevos[campo]) nuevos[campo] = problema.message;
       }
       setErrores(nuevos);
+      enfocarPrimerCampoInvalido(formulario);
       return;
     }
 
@@ -127,6 +130,7 @@ export function DialogoAjuste({
             </label>
             <Input
               id="ajuste-stock"
+              name="nuevoStock"
               value={nuevoStock}
               onChange={(evento) => {
                 setNuevoStock(evento.target.value);
@@ -136,9 +140,16 @@ export function DialogoAjuste({
               inputMode="numeric"
               autoComplete="off"
               aria-invalid={errores.nuevoStock ? true : undefined}
+              aria-describedby={
+                errores.nuevoStock ? "ajuste-stock-error" : undefined
+              }
             />
             {errores.nuevoStock ? (
-              <p className="text-xs text-destructive-text">
+              <p
+                id="ajuste-stock-error"
+                role="alert"
+                className="text-xs text-destructive-text"
+              >
                 {errores.nuevoStock}
               </p>
             ) : null}
@@ -149,6 +160,7 @@ export function DialogoAjuste({
             </label>
             <Input
               id="ajuste-motivo"
+              name="motivo"
               value={motivo}
               onChange={(evento) => {
                 setMotivo(evento.target.value);
@@ -157,9 +169,18 @@ export function DialogoAjuste({
               placeholder="Ej. Conteo físico de inventario"
               autoComplete="off"
               aria-invalid={errores.motivo ? true : undefined}
+              aria-describedby={
+                errores.motivo ? "ajuste-motivo-error" : undefined
+              }
             />
             {errores.motivo ? (
-              <p className="text-xs text-destructive-text">{errores.motivo}</p>
+              <p
+                id="ajuste-motivo-error"
+                role="alert"
+                className="text-xs text-destructive-text"
+              >
+                {errores.motivo}
+              </p>
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">

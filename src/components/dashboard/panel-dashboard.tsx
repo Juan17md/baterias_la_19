@@ -218,7 +218,7 @@ export function PanelDashboard() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader className="flex-row items-start justify-between gap-3">
+          <CardHeader className="flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex flex-col gap-1.5">
               <CardTitle>Últimas ventas</CardTitle>
               <CardDescription>
@@ -273,7 +273,7 @@ export function PanelDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex-row items-start justify-between gap-3">
+          <CardHeader className="flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex flex-col gap-1.5">
               <CardTitle>Alertas de stock</CardTitle>
               <CardDescription>

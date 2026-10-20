@@ -7,7 +7,11 @@ import { useAuth } from "@/hooks/use-auth";
 
 function PantallaCarga() {
   return (
-    <div className="flex min-h-svh items-center justify-center gap-2 text-sm text-muted-foreground">
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex min-h-svh items-center justify-center gap-2 text-sm text-muted-foreground"
+    >
       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
       Verificando sesión…
     </div>

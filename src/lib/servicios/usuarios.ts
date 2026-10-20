@@ -9,7 +9,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import type { RolUsuario, Usuario } from "@/types";
 
 function mapearUsuario(uid: string, datos: Record<string, unknown>): Usuario {

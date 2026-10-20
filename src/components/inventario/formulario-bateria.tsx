@@ -10,7 +10,7 @@ import {
   type DatosBateria,
   type DatosNuevaBateria,
 } from "@/lib/validaciones/baterias";
-import { formatearNumero } from "@/lib/utils";
+import { enfocarPrimerCampoInvalido, formatearNumero } from "@/lib/utils";
 import type { Bateria } from "@/types";
 
 type FormularioEstado = {
@@ -92,17 +92,30 @@ function CampoTexto({
       </label>
       <Input
         id={id}
+        name={id.replace(/^bateria-/, "")}
         value={valor}
         onChange={(evento) => onChange(evento.target.value)}
         placeholder={marcador}
         inputMode={inputMode}
         autoComplete="off"
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={
+          [error ? `${id}-error` : null, ayuda ? `${id}-ayuda` : null]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
       />
-      {ayuda ? <p className="text-xs text-muted-foreground">{ayuda}</p> : null}
+      {ayuda ? (
+        <p id={`${id}-ayuda`} className="text-xs text-muted-foreground">
+          {ayuda}
+        </p>
+      ) : null}
       {error ? (
-        <p id={`${id}-error`} className="text-xs text-destructive-text">
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="text-xs text-destructive-text"
+        >
           {error}
         </p>
       ) : null}
@@ -164,6 +177,7 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
     evento.preventDefault();
     if (props.guardando) return;
 
+    const formulario = evento.currentTarget;
     const resultado =
       props.modo === "crear"
         ? esquemaNuevaBateria.safeParse(estado)
@@ -176,6 +190,7 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
         if (campo && !nuevos[campo]) nuevos[campo] = problema.message;
       }
       setErrores(nuevos);
+      enfocarPrimerCampoInvalido(formulario);
       return;
     }
 
@@ -199,7 +214,7 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
       ) : null}
 
       <section className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold">Identificación</h3>
+        <h2 className="text-sm font-semibold">Identificación</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <CampoTexto
             id="bateria-codigo"
@@ -247,7 +262,7 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold">Precios y stock</h3>
+        <h2 className="text-sm font-semibold">Precios y stock</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <CampoTexto
             id="bateria-precio-compra"
@@ -303,7 +318,7 @@ export function FormularioBateria(props: PropsCrear | PropsEditar) {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold">Proveedor</h3>
+        <h2 className="text-sm font-semibold">Proveedor</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <CampoTexto
             id="bateria-proveedor"

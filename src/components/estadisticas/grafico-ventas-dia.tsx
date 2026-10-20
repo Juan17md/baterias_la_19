@@ -79,7 +79,7 @@ export function GraficoVentasDia({ serie }: Props) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between gap-3">
+      <CardHeader className="flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1.5">
           <CardTitle>Ingresos por día</CardTitle>
           <CardDescription>
@@ -100,116 +100,118 @@ export function GraficoVentasDia({ serie }: Props) {
       <CardContent>
         {hayDatos ? (
           <>
-            <svg
-              viewBox={`0 0 ${ANCHO} ${ALTO}`}
-              className="h-auto w-full"
-              role="img"
-              aria-label={`Ingresos por día del período: ${formatearNumero(total)} dólares en ${serie.length} días.`}
-            >
-              <defs>
-                <linearGradient
-                  id="degradado-ingresos"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="var(--primary)"
-                    stopOpacity="0.28"
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor="var(--primary)"
-                    stopOpacity="0"
-                  />
-                </linearGradient>
-              </defs>
-
-              <g aria-hidden="true">
-                {ticks.map((tick) => (
-                  <g key={tick.y}>
-                    <line
-                      x1={MARGEN.izquierda}
-                      x2={ANCHO - MARGEN.derecha}
-                      y1={tick.y}
-                      y2={tick.y}
-                      stroke="var(--border)"
-                      strokeDasharray="4 4"
+            <div className="-mx-1 overflow-x-auto pb-1">
+              <svg
+                viewBox={`0 0 ${ANCHO} ${ALTO}`}
+                className="h-auto w-full min-w-[640px]"
+                role="img"
+                aria-label={`Ingresos por día del período: ${formatearNumero(total)} dólares en ${serie.length} días.`}
+              >
+                <defs>
+                  <linearGradient
+                    id="degradado-ingresos"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="var(--primary)"
+                      stopOpacity="0.28"
                     />
-                    <text
-                      x={MARGEN.izquierda - 8}
-                      y={tick.y + 4}
-                      textAnchor="end"
-                      fill="var(--muted-foreground)"
-                      fontSize={10}
-                    >
-                      {formatearNumeroCompacto(tick.valor)}
-                    </text>
-                  </g>
-                ))}
-
-                {puntos.length > 1 ? (
-                  <>
-                    <path d={area} fill="url(#degradado-ingresos)" />
-                    <path
-                      d={linea}
-                      fill="none"
-                      stroke="var(--primary)"
-                      strokeWidth={2.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                    <stop
+                      offset="100%"
+                      stopColor="var(--primary)"
+                      stopOpacity="0"
                     />
-                  </>
-                ) : null}
+                  </linearGradient>
+                </defs>
 
-                {puntos.map((punto) => (
-                  <g key={punto.fecha}>
-                    {puntos.length === 1 ? (
-                      <rect
-                        x={punto.x - 28}
-                        y={punto.y}
-                        width={56}
-                        height={Math.max(baseY - punto.y, 1)}
-                        rx={6}
-                        fill="var(--primary)"
-                        opacity={0.85}
+                <g aria-hidden="true">
+                  {ticks.map((tick) => (
+                    <g key={tick.y}>
+                      <line
+                        x1={MARGEN.izquierda}
+                        x2={ANCHO - MARGEN.derecha}
+                        y1={tick.y}
+                        y2={tick.y}
+                        stroke="var(--border)"
+                        strokeDasharray="4 4"
                       />
-                    ) : (
-                      <circle
-                        cx={punto.x}
-                        cy={punto.y}
-                        r={3.5}
-                        fill="var(--primary)"
-                        stroke="var(--card)"
-                        strokeWidth={1.5}
-                      />
-                    )}
-                    <title>
-                      {`${punto.etiqueta}: $ ${formatearNumero(punto.totalUsd)} · ${punto.ventas} ventas · ${punto.unidades} unidades`}
-                    </title>
-                  </g>
-                ))}
+                      <text
+                        x={MARGEN.izquierda - 8}
+                        y={tick.y + 4}
+                        textAnchor="end"
+                        fill="var(--muted-foreground)"
+                        fontSize={10}
+                      >
+                        {formatearNumeroCompacto(tick.valor)}
+                      </text>
+                    </g>
+                  ))}
 
-                {puntos.map((punto, indice) =>
-                  indice === 0 ||
-                  indice === puntos.length - 1 ||
-                  indice % paso === 0 ? (
-                    <text
-                      key={`etiqueta-${punto.fecha}`}
-                      x={punto.x}
-                      y={ALTO - 10}
-                      textAnchor="middle"
-                      fill="var(--muted-foreground)"
-                      fontSize={10}
-                    >
-                      {punto.etiqueta}
-                    </text>
-                  ) : null,
-                )}
-              </g>
-            </svg>
+                  {puntos.length > 1 ? (
+                    <>
+                      <path d={area} fill="url(#degradado-ingresos)" />
+                      <path
+                        d={linea}
+                        fill="none"
+                        stroke="var(--primary)"
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </>
+                  ) : null}
+
+                  {puntos.map((punto) => (
+                    <g key={punto.fecha}>
+                      {puntos.length === 1 ? (
+                        <rect
+                          x={punto.x - 28}
+                          y={punto.y}
+                          width={56}
+                          height={Math.max(baseY - punto.y, 1)}
+                          rx={6}
+                          fill="var(--primary)"
+                          opacity={0.85}
+                        />
+                      ) : (
+                        <circle
+                          cx={punto.x}
+                          cy={punto.y}
+                          r={3.5}
+                          fill="var(--primary)"
+                          stroke="var(--card)"
+                          strokeWidth={1.5}
+                        />
+                      )}
+                      <title>
+                        {`${punto.etiqueta}: $ ${formatearNumero(punto.totalUsd)} · ${punto.ventas} ventas · ${punto.unidades} unidades`}
+                      </title>
+                    </g>
+                  ))}
+
+                  {puntos.map((punto, indice) =>
+                    indice === 0 ||
+                    indice === puntos.length - 1 ||
+                    indice % paso === 0 ? (
+                      <text
+                        key={`etiqueta-${punto.fecha}`}
+                        x={punto.x}
+                        y={ALTO - 10}
+                        textAnchor="middle"
+                        fill="var(--muted-foreground)"
+                        fontSize={10}
+                      >
+                        {punto.etiqueta}
+                      </text>
+                    ) : null,
+                  )}
+                </g>
+              </svg>
+            </div>
 
             {mostrarTabla ? (
               <div className="mt-4 max-h-80 overflow-auto rounded-md border border-border">

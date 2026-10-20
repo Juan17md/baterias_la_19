@@ -43,7 +43,7 @@ export default function PaginaLogin() {
           </p>
         </div>
 
-        <p className="relative text-xs text-white/60">
+        <p className="relative text-xs text-white/80">
           Venezuela · Precios en $ con tasa BCV del día
         </p>
       </div>

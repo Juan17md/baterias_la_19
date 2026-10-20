@@ -28,7 +28,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { anularVenta, obtenerVenta } from "@/lib/servicios/ventas";
-import { formatearFecha, formatearNumero } from "@/lib/utils";
+import {
+  enfocarPrimerCampoInvalido,
+  formatearFecha,
+  formatearNumero,
+} from "@/lib/utils";
 import { esquemaAnulacionVenta } from "@/lib/validaciones/ventas";
 import type { Venta } from "@/types";
 
@@ -95,12 +99,14 @@ export function DetalleVenta({ id }: { id: string }) {
     evento.preventDefault();
     if (!venta || !perfil || anulando) return;
 
+    const formulario = evento.currentTarget;
     const validado = esquemaAnulacionVenta.safeParse({ motivo });
     if (!validado.success) {
       setErrorMotivo(
         validado.error.issues[0]?.message ??
           "Indica el motivo de la anulación.",
       );
+      enfocarPrimerCampoInvalido(formulario);
       return;
     }
 
@@ -256,15 +262,34 @@ export function DetalleVenta({ id }: { id: string }) {
 
             <div className="overflow-x-auto rounded-md border border-border">
               <table className="w-full text-sm">
+                <caption className="sr-only">
+                  Baterías incluidas en el comprobante, con precio unitario y
+                  subtotal
+                </caption>
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">Código</th>
-                    <th className="px-4 py-3 font-medium">Descripción</th>
-                    <th className="px-4 py-3 text-center font-medium">Cant.</th>
-                    <th className="px-4 py-3 text-right font-medium">
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Código
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Descripción
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-center font-medium"
+                    >
+                      Cant.
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-right font-medium"
+                    >
                       Precio unit.
                     </th>
-                    <th className="px-4 py-3 text-right font-medium">
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-right font-medium"
+                    >
                       Subtotal
                     </th>
                   </tr>
@@ -392,6 +417,7 @@ export function DetalleVenta({ id }: { id: string }) {
               </label>
               <Input
                 id="anulacion-motivo"
+                name="motivo"
                 value={motivo}
                 onChange={(evento) => {
                   setMotivo(evento.target.value);
@@ -401,9 +427,18 @@ export function DetalleVenta({ id }: { id: string }) {
                 autoComplete="off"
                 autoFocus
                 aria-invalid={errorMotivo ? true : undefined}
+                aria-describedby={
+                  errorMotivo ? "anulacion-motivo-error" : undefined
+                }
               />
               {errorMotivo ? (
-                <p className="text-xs text-destructive-text">{errorMotivo}</p>
+                <p
+                  id="anulacion-motivo-error"
+                  role="alert"
+                  className="text-xs text-destructive-text"
+                >
+                  {errorMotivo}
+                </p>
               ) : null}
             </div>
             <DialogFooter>

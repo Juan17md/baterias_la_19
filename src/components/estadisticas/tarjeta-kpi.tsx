@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 type TonoKpi = "primary" | "success" | "warning" | "info";
 
 const TONOS: Record<TonoKpi, string> = {
-  primary: "bg-primary/10 text-primary dark:bg-primary/15",
+  primary: "bg-primary/10 text-primary-text dark:bg-primary/15",
   success: "bg-success/10 text-success-text dark:bg-success/15",
   warning: "bg-warning/10 text-warning-text dark:bg-warning/15",
-  info: "bg-info/10 text-info dark:bg-info/15",
+  info: "bg-info/10 text-info-text dark:bg-info/15",
 };
 
 type Props = {

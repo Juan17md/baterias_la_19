@@ -103,3 +103,17 @@ export function formatearNumeroCompacto(valor: number): string {
   }
   return formatearNumero(valor, absoluto > 0 && absoluto < 10 ? 2 : 0);
 }
+
+/**
+ * Enfoca el primer campo marcado como inválido después de que React pinte los
+ * errores. Se usa al enviar formularios para que el teclado y los lectores de
+ * pantalla aterricen directamente en el problema.
+ */
+export function enfocarPrimerCampoInvalido(
+  formulario: HTMLFormElement | null,
+): void {
+  if (!formulario) return;
+  requestAnimationFrame(() => {
+    formulario.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  });
+}

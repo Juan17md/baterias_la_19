@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,6 +11,7 @@ import {
   LogOut,
   Package,
   Users,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,23 @@ const NAVEGACION = [
   },
 ] as const;
 
+const SELECTOR_ENFOCABLES =
+  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function suscribirEscritorio(notificar: () => void) {
+  const consulta = window.matchMedia("(min-width: 1024px)");
+  consulta.addEventListener("change", notificar);
+  return () => consulta.removeEventListener("change", notificar);
+}
+
+function leerEscritorio() {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function leerEscritorioEnServidor() {
+  return false;
+}
+
 type AppSidebarProps = {
   abierto: boolean;
   alCerrar: () => void;
@@ -59,9 +78,69 @@ function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
   const rutaActual = usePathname();
   const { perfil, cerrarSesion } = useAuth();
   const esAdmin = perfil?.rol === "admin";
+  const referenciaAside = useRef<HTMLElement>(null);
+  const esEscritorio = useSyncExternalStore(
+    suscribirEscritorio,
+    leerEscritorio,
+    leerEscritorioEnServidor,
+  );
   const navegacionVisible = NAVEGACION.filter(
     (elemento) => !elemento.soloAdmin || esAdmin,
   );
+
+  useEffect(() => {
+    if (!abierto || esEscritorio) return;
+
+    const aside = referenciaAside.current;
+    if (!aside) return;
+
+    const focoAnterior =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    aside.querySelector<HTMLElement>("nav a[href]")?.focus();
+
+    function obtenerEnfocables() {
+      return Array.from(
+        aside?.querySelectorAll<HTMLElement>(SELECTOR_ENFOCABLES) ?? [],
+      ).filter((elemento) => elemento.offsetParent !== null);
+    }
+
+    function manejarTecla(evento: KeyboardEvent) {
+      if (evento.key === "Escape") {
+        evento.preventDefault();
+        alCerrar();
+        return;
+      }
+
+      if (evento.key !== "Tab") return;
+
+      const enfocables = obtenerEnfocables();
+      if (enfocables.length === 0) return;
+
+      const primero = enfocables[0];
+      const ultimo = enfocables[enfocables.length - 1];
+
+      if (evento.shiftKey && document.activeElement === primero) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primero.focus();
+      }
+    }
+
+    document.addEventListener("keydown", manejarTecla);
+
+    return () => {
+      document.removeEventListener("keydown", manejarTecla);
+      document.body.style.overflow = overflowAnterior;
+      if (focoAnterior?.isConnected) focoAnterior.focus();
+    };
+  }, [abierto, alCerrar, esEscritorio]);
 
   async function manejarCerrarSesion() {
     await cerrarSesion();
@@ -79,6 +158,12 @@ function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
         />
       ) : null}
       <aside
+        id="menu-navegacion"
+        ref={referenciaAside}
+        inert={!abierto && !esEscritorio}
+        role={!esEscritorio && abierto ? "dialog" : undefined}
+        aria-modal={!esEscritorio && abierto ? true : undefined}
+        aria-label="Menú de navegación"
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-border bg-card transition-transform duration-[250ms] ease-in-out lg:translate-x-0",
           abierto ? "translate-x-0" : "-translate-x-full",
@@ -87,7 +172,7 @@ function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
         <Link
           href="/dashboard"
           onClick={alCerrar}
-          className="flex h-14 items-center gap-2.5 border-b border-border px-4"
+          className="flex h-14 items-center gap-2.5 border-b border-border px-4 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none focus-visible:ring-inset"
         >
           <span className="flex items-center justify-center rounded-lg dark:bg-white dark:p-1">
             <Image
@@ -107,6 +192,16 @@ function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
           </span>
         </Link>
 
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2.5 right-2.5 lg:hidden"
+          aria-label="Cerrar menú de navegación"
+          onClick={alCerrar}
+        >
+          <X className="size-5" aria-hidden="true" />
+        </Button>
+
         <nav
           aria-label="Módulos"
           className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3"
@@ -125,9 +220,9 @@ function AppSidebar({ abierto, alCerrar }: AppSidebarProps) {
                 onClick={alCerrar}
                 aria-current={activo ? "page" : undefined}
                 className={cn(
-                  "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
+                  "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none focus-visible:ring-inset",
                   activo
-                    ? "bg-primary/10 text-primary before:absolute before:top-1/2 before:left-0 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-primary"
+                    ? "bg-primary/10 text-primary-text before:absolute before:top-1/2 before:left-0 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >

@@ -20,13 +20,14 @@ import { formatearFecha, formatearNumero } from "@/lib/utils";
 
 type AppHeaderProps = {
   alAbrirMenu: () => void;
+  menuAbierto: boolean;
 };
 
 /**
  * Cabecera del dashboard: menú móvil, tasa BCV vigente (con corrección manual
  * para el admin), tema y usuario.
  */
-function AppHeader({ alAbrirMenu }: AppHeaderProps) {
+function AppHeader({ alAbrirMenu, menuAbierto }: AppHeaderProps) {
   const { perfil } = useAuth();
   const { tasa, cargando, errorApi, corregirTasa } = useTasa();
   const [dialogoTasaAbierto, setDialogoTasaAbierto] = useState(false);
@@ -87,9 +88,11 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
         size="icon"
         className="lg:hidden"
         aria-label="Abrir menú de navegación"
+        aria-expanded={menuAbierto}
+        aria-controls="menu-navegacion"
         onClick={alAbrirMenu}
       >
-        <Menu className="size-5" />
+        <Menu className="size-5" aria-hidden="true" />
       </Button>
 
       <div className="flex-1" />
@@ -102,10 +105,11 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
             setValorTasa(tasa ? String(tasa.valor) : "");
             setDialogoTasaAbierto(true);
           }}
-          className="hidden items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:bg-muted sm:flex"
+          className="hidden items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none sm:flex"
         >
           {contenidoTasa}
           <RefreshCw className="size-3" aria-hidden="true" />
+          <span className="sr-only">{tituloTasa}</span>
         </button>
       ) : (
         <div
@@ -113,13 +117,14 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
           className="hidden items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground sm:flex"
         >
           {contenidoTasa}
+          <span className="sr-only">{tituloTasa}</span>
         </div>
       )}
 
       <ThemeToggle />
 
       <div className="ml-1 hidden items-center gap-2 border-l border-border pl-3 md:flex">
-        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary-text">
           <User className="size-4" aria-hidden="true" />
         </span>
         <span className="flex flex-col leading-tight">
@@ -151,11 +156,14 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
               </label>
               <Input
                 id="valor-tasa"
+                name="tasa"
                 inputMode="decimal"
                 placeholder="Ej. 879,12"
                 value={valorTasa}
                 onChange={(evento) => setValorTasa(evento.target.value)}
+                autoComplete="off"
                 autoFocus
+                required
               />
             </div>
             <DialogFooter>

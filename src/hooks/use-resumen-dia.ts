@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   collection,
   onSnapshot,
@@ -9,7 +9,7 @@ import {
   Timestamp,
   where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import { calcularKpis } from "@/lib/servicios/estadisticas";
 import { mapearVenta } from "@/lib/servicios/ventas";
 import { inicioDelDia, sumarDias } from "@/lib/utils";
@@ -62,15 +62,18 @@ export function useResumenDia(): {
     return cancelar;
   }, [intento]);
 
+  const kpis = useMemo(() => calcularKpis(ventas), [ventas]);
+  const recargar = useCallback(() => {
+    setCargando(true);
+    setError(null);
+    setIntento((valor) => valor + 1);
+  }, []);
+
   return {
     ventas,
-    kpis: calcularKpis(ventas),
+    kpis,
     cargando,
     error,
-    recargar: () => {
-      setCargando(true);
-      setError(null);
-      setIntento((valor) => valor + 1);
-    },
+    recargar,
   };
 }

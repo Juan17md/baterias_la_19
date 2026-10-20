@@ -35,6 +35,7 @@ export function CamposFecha({
         </label>
         <Input
           id={`${idPrefijo}-desde`}
+          name={`${idPrefijo}-desde`}
           type="date"
           value={desde}
           max={hasta || undefined}
@@ -49,6 +50,7 @@ export function CamposFecha({
         </label>
         <Input
           id={`${idPrefijo}-hasta`}
+          name={`${idPrefijo}-hasta`}
           type="date"
           value={hasta}
           min={desde || undefined}

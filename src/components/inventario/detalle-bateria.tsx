@@ -434,6 +434,10 @@ export function DetalleBateria({ id }: { id: string }) {
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
+                <caption className="sr-only">
+                  Movimientos recientes de la batería con fecha, tipo, cantidad,
+                  stock, motivo y usuario
+                </caption>
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
                     <th scope="col" className="px-4 py-3 font-medium">

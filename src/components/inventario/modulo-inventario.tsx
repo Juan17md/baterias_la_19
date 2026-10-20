@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -128,6 +128,27 @@ function calcularResumenInventario(baterias: Bateria[]): ResumenInventario {
   };
 }
 
+/** Ordena baterías según el criterio activo en la tabla. */
+function compararBaterias(
+  a: Bateria,
+  b: Bateria,
+  orden: OrdenInventario,
+): number {
+  switch (orden) {
+    case "marca":
+      return (
+        a.marca.localeCompare(b.marca, "es") ||
+        a.modelo.localeCompare(b.modelo, "es")
+      );
+    case "precio":
+      return a.precioVenta - b.precioVenta;
+    case "stock":
+      return a.stock - b.stock;
+    default:
+      return a.codigo.localeCompare(b.codigo, "es", { numeric: true });
+  }
+}
+
 /** Módulo principal del inventario: tabla con búsqueda, filtros y paginación. */
 export function ModuloInventario() {
   const { tasa } = useTasa();
@@ -172,11 +193,18 @@ export function ModuloInventario() {
     };
   }, [recarga]);
 
-  const marcas = [...new Set(baterias.map((bateria) => bateria.marca))].sort(
-    (a, b) => a.localeCompare(b, "es"),
+  const marcas = useMemo(
+    () =>
+      [...new Set(baterias.map((bateria) => bateria.marca))].sort((a, b) =>
+        a.localeCompare(b, "es"),
+      ),
+    [baterias],
   );
 
-  const resumen = calcularResumenInventario(baterias);
+  const resumen = useMemo(
+    () => calcularResumenInventario(baterias),
+    [baterias],
+  );
   const bsInvertido =
     tasa === null ? "—" : formatearNumero(resumen.totalInvertido * tasa.valor);
   const bsGanancia =
@@ -186,44 +214,40 @@ export function ModuloInventario() {
   const etiquetaUnidades =
     resumen.unidades === 1 ? "1 unidad" : `${resumen.unidades} unidades`;
 
-  const termino = normalizar(busqueda.trim());
-  const filtradas = baterias.filter((bateria) => {
-    if (filtroEstado === "activos" && !bateria.activo) return false;
-    if (filtroEstado === "desactivados" && bateria.activo) return false;
-    if (filtroMarca !== "todas" && bateria.marca !== filtroMarca) return false;
-    if (
-      filtroStock !== "todos" &&
-      calcularEstadoStock(bateria.stock, bateria.stockMinimo) !== filtroStock
-    ) {
-      return false;
-    }
-    if (termino) {
-      const texto = normalizar(
-        `${bateria.codigo} ${bateria.marca} ${bateria.modelo}`,
-      );
-      if (!texto.includes(termino)) return false;
-    }
-    return true;
-  });
+  const termino = useMemo(() => normalizar(busqueda.trim()), [busqueda]);
+  const filtradas = useMemo(
+    () =>
+      baterias.filter((bateria) => {
+        if (filtroEstado === "activos" && !bateria.activo) return false;
+        if (filtroEstado === "desactivados" && bateria.activo) return false;
+        if (filtroMarca !== "todas" && bateria.marca !== filtroMarca)
+          return false;
+        if (
+          filtroStock !== "todos" &&
+          calcularEstadoStock(bateria.stock, bateria.stockMinimo) !==
+            filtroStock
+        ) {
+          return false;
+        }
+        if (termino) {
+          const texto = normalizar(
+            `${bateria.codigo} ${bateria.marca} ${bateria.modelo}`,
+          );
+          if (!texto.includes(termino)) return false;
+        }
+        return true;
+      }),
+    [baterias, filtroEstado, filtroMarca, filtroStock, termino],
+  );
 
-  const comparar = (a: Bateria, b: Bateria): number => {
-    switch (orden) {
-      case "marca":
-        return (
-          a.marca.localeCompare(b.marca, "es") ||
-          a.modelo.localeCompare(b.modelo, "es")
-        );
-      case "precio":
-        return a.precioVenta - b.precioVenta;
-      case "stock":
-        return a.stock - b.stock;
-      default:
-        return a.codigo.localeCompare(b.codigo, "es", { numeric: true });
-    }
-  };
-
-  const ordenadas = [...filtradas].sort((a, b) =>
-    ascendente ? comparar(a, b) : comparar(b, a),
+  const ordenadas = useMemo(
+    () =>
+      [...filtradas].sort((a, b) =>
+        ascendente
+          ? compararBaterias(a, b, orden)
+          : compararBaterias(b, a, orden),
+      ),
+    [filtradas, ascendente, orden],
   );
 
   const totalPaginas = Math.max(
@@ -307,7 +331,13 @@ export function ModuloInventario() {
       />
 
       {!errorCarga ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          role={cargando ? "status" : undefined}
+          aria-label={
+            cargando ? "Cargando valorización del inventario" : undefined
+          }
+        >
           {cargando ? (
             Array.from({ length: 3 }, (_, indice) => (
               <div
@@ -578,7 +608,7 @@ export function ModuloInventario() {
                         <td className="px-4 py-3">
                           <Link
                             href={`/dashboard/inventario/${bateria.id}`}
-                            className="font-mono text-sm font-medium hover:text-primary hover:underline"
+                            className="font-mono text-sm font-medium hover:text-primary-text hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
                           >
                             {bateria.codigo}
                           </Link>
@@ -669,7 +699,7 @@ export function ModuloInventario() {
                 </table>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
-                <p className="text-xs text-muted-foreground">
+                <p role="status" className="text-xs text-muted-foreground">
                   Mostrando {inicio}–{fin} de {ordenadas.length}{" "}
                   {ordenadas.length === 1 ? "batería" : "baterías"}
                 </p>

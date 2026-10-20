@@ -4,7 +4,6 @@ import { createContext, useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { toast } from "sonner";
 import { auth } from "@/lib/firebase/configuracion";
-import { obtenerPerfil } from "@/lib/servicios/usuarios";
 import type { Usuario } from "@/types";
 
 export type EstadoAuth = {
@@ -42,6 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
+          // Carga diferida: Firestore no entra en el bundle inicial del login.
+          const { obtenerPerfil } = await import("@/lib/servicios/usuarios");
           const perfilEncontrado = await obtenerPerfil(usuarioFirebase.uid);
           if (!perfilEncontrado || !perfilEncontrado.activo) {
             await signOut(auth).catch(() => undefined);

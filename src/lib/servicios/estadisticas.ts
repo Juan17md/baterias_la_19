@@ -10,7 +10,7 @@ import {
   Timestamp,
   where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import { contarDiasInclusivos, inicioDelDia, sumarDias } from "@/lib/utils";
 import type {
   EstadisticasPeriodo,

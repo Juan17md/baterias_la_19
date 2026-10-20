@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/configuracion";
+import { db } from "@/lib/firebase/firestore";
 import { mapearBateria } from "@/lib/servicios/baterias";
 import type { Bateria } from "@/types";
 

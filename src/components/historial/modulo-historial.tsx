@@ -27,6 +27,7 @@ export function ModuloHistorial() {
 
       <div
         className="inline-flex w-fit gap-1 rounded-lg border border-border bg-card p-1"
+        role="group"
         aria-label="Secciones del historial"
       >
         {PESTANAS.map(({ valor, etiqueta, icono: Icono }) => {
@@ -38,7 +39,7 @@ export function ModuloHistorial() {
               aria-pressed={activa}
               onClick={() => setPestana(valor)}
               className={cn(
-                "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
+                "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none",
                 activa
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",

@@ -36,7 +36,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-elevated p-6 shadow-lg outline-none data-[state=closed]:animate-dialogo-salida data-[state=open]:animate-dialogo-entrada",
+          "fixed top-1/2 left-1/2 z-50 max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-lg border border-border bg-elevated p-6 shadow-lg outline-none data-[state=closed]:animate-dialogo-salida data-[state=open]:animate-dialogo-entrada",
           className,
         )}
         {...props}
@@ -46,7 +46,7 @@ function DialogContent({
           aria-label="Cerrar"
           className="absolute top-4 right-4 rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
         >
-          <X className="size-4" />
+          <X className="size-4" aria-hidden="true" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>

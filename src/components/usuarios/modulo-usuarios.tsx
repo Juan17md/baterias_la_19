@@ -280,12 +280,23 @@ export function ModuloUsuarios() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">
+                Usuarios del sistema con su rol, estado y acciones disponibles
+              </caption>
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">Usuario</th>
-                  <th className="px-4 py-3 font-medium">Rol</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
-                  <th className="px-4 py-3 text-right font-medium">Acciones</th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Usuario
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Rol
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Estado
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -358,6 +369,7 @@ export function ModuloUsuarios() {
                             variant="ghost"
                             size="sm"
                             title={`Enviar restablecimiento de contraseña a ${usuario.email}`}
+                            aria-label={`Enviar restablecimiento de contraseña a ${usuario.email}`}
                             disabled={enProceso}
                             onClick={() => void manejarRestablecer(usuario)}
                           >
@@ -375,6 +387,11 @@ export function ModuloUsuarios() {
                                   ? "No puedes desactivar tu propia cuenta"
                                   : `Desactivar a ${usuario.nombre}`
                               }
+                              aria-label={
+                                esUnoMismo
+                                  ? "No puedes desactivar tu propia cuenta"
+                                  : `Desactivar a ${usuario.nombre}`
+                              }
                               onClick={() => setUsuarioADesactivar(usuario)}
                             >
                               <UserX className="size-4" aria-hidden="true" />
@@ -388,6 +405,7 @@ export function ModuloUsuarios() {
                               size="sm"
                               disabled={enProceso}
                               title={`Reactivar a ${usuario.nombre}`}
+                              aria-label={`Reactivar a ${usuario.nombre}`}
                               onClick={() => void manejarActivar(usuario)}
                             >
                               <UserCheck
@@ -424,6 +442,8 @@ export function ModuloUsuarios() {
               </label>
               <Input
                 id="usuario-nombre"
+                name="nombre"
+                autoComplete="name"
                 value={nombreNuevo}
                 onChange={(evento) => setNombreNuevo(evento.target.value)}
                 placeholder="Ej. María Pérez"
@@ -437,7 +457,10 @@ export function ModuloUsuarios() {
               </label>
               <Input
                 id="usuario-correo"
+                name="correo"
                 type="email"
+                autoComplete="email"
+                spellCheck={false}
                 value={correoNuevo}
                 onChange={(evento) => setCorreoNuevo(evento.target.value)}
                 placeholder="persona@correo.com"
@@ -454,10 +477,14 @@ export function ModuloUsuarios() {
               </label>
               <Input
                 id="usuario-contrasena"
+                name="contrasena"
                 type="text"
+                autoComplete="new-password"
+                spellCheck={false}
                 value={contrasenaNueva}
                 onChange={(evento) => setContrasenaNueva(evento.target.value)}
                 placeholder="Mínimo 6 caracteres"
+                minLength={6}
                 disabled={creando}
                 required
               />
