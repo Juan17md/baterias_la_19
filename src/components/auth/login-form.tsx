@@ -142,7 +142,7 @@ function LoginForm() {
       </form>
 
       <p className="text-center text-xs text-muted-foreground">
-        ¿Olvidaste tu contraseña? Contacta al administrador de la tienda.
+        ¿Olvidaste tu contraseña? Contacta al administrador.
       </p>
     </div>
   );
