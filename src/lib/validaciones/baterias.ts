@@ -23,38 +23,51 @@ const textoOpcional = (maximo: number, mensaje: string) =>
   );
 
 /** Datos comunes de una batería (alta y edición). */
-export const esquemaDatosBateria = z.object({
-  codigo: z
-    .string()
-    .trim()
-    .min(2, "El código es obligatorio (mínimo 2 caracteres)")
-    .max(30, "Máximo 30 caracteres")
-    .transform((valor) => valor.toUpperCase()),
-  marca: z
-    .string()
-    .trim()
-    .min(1, "La marca es obligatoria")
-    .max(60, "Máximo 60 caracteres"),
-  modelo: z
-    .string()
-    .trim()
-    .min(1, "El modelo es obligatorio")
-    .max(80, "Máximo 80 caracteres"),
-  voltaje: numeroPositivo("Indica el voltaje en voltios (ej. 12)"),
-  amperaje: numeroPositivo("Indica el amperaje en Ah (ej. 600)"),
-  precioCompra: z.preprocess(
-    aNumero,
-    z
-      .number({ error: "Indica el precio de compra en $" })
-      .min(0, "El precio de compra no puede ser negativo"),
-  ),
-  precioVenta: numeroPositivo("Indica el precio de venta en $"),
-  stockMinimo: enteroNoNegativo("Indica el stock mínimo (número entero)"),
-  proveedor: textoOpcional(80, "Máximo 80 caracteres"),
-  garantiaMeses: enteroNoNegativo(
-    "Indica la garantía en meses (0 si no aplica)",
-  ),
-});
+export const esquemaDatosBateria = z
+  .object({
+    codigo: z
+      .string()
+      .trim()
+      .min(2, "El código es obligatorio (mínimo 2 caracteres)")
+      .max(30, "Máximo 30 caracteres")
+      .transform((valor) => valor.toUpperCase()),
+    marca: z
+      .string()
+      .trim()
+      .min(1, "La marca es obligatoria")
+      .max(60, "Máximo 60 caracteres"),
+    modelo: z
+      .string()
+      .trim()
+      .min(1, "El modelo es obligatorio")
+      .max(80, "Máximo 80 caracteres"),
+    voltaje: numeroPositivo("Indica el voltaje en voltios (ej. 12)"),
+    amperaje: numeroPositivo("Indica el amperaje en Ah (ej. 600)"),
+    precioCompra: z.preprocess(
+      aNumero,
+      z
+        .number({ error: "Indica el precio de compra en $" })
+        .min(0, "El precio de compra no puede ser negativo"),
+    ),
+    precioVenta: numeroPositivo("Indica el precio de venta en $"),
+    stockMinimo: enteroNoNegativo("Indica el stock mínimo (número entero)"),
+    proveedor: textoOpcional(80, "Máximo 80 caracteres"),
+    garantiaMeses: enteroNoNegativo(
+      "Indica la garantía en meses (0 si no aplica)",
+    ),
+  })
+  .refine(
+    // Comparar solo si ambos precios son números válidos; si alguno falla,
+    // el mensaje específico del campo ya lo indica.
+    (datos) =>
+      Number.isFinite(datos.precioCompra) &&
+      Number.isFinite(datos.precioVenta) &&
+      datos.precioVenta > datos.precioCompra,
+    {
+      error: "El precio de venta debe ser mayor al precio de compra",
+      path: ["precioVenta"],
+    },
+  );
 
 /** Alta de batería: incluye el stock inicial (se registra como entrada). */
 export const esquemaNuevaBateria = esquemaDatosBateria.extend({
