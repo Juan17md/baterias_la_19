@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, RefreshCw, ShoppingCart, User } from "lucide-react";
+import { Menu, RefreshCw, User } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { DialogoRegistrarVenta } from "@/components/ventas/dialogo-registrar-venta";
 import { useAuth } from "@/hooks/use-auth";
 import { useTasa } from "@/hooks/use-tasa";
 import { formatearFecha, formatearNumero } from "@/lib/utils";
@@ -25,7 +24,7 @@ type AppHeaderProps = {
 
 /**
  * Cabecera del dashboard: menú móvil, tasa BCV vigente (con corrección manual
- * para el admin), venta rápida, tema y usuario.
+ * para el admin), tema y usuario.
  */
 function AppHeader({ alAbrirMenu }: AppHeaderProps) {
   const { perfil } = useAuth();
@@ -33,7 +32,6 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
   const [dialogoTasaAbierto, setDialogoTasaAbierto] = useState(false);
   const [valorTasa, setValorTasa] = useState("");
   const [guardandoTasa, setGuardandoTasa] = useState(false);
-  const [ventaAbierta, setVentaAbierta] = useState(false);
 
   const esAdmin = perfil?.rol === "admin";
 
@@ -118,11 +116,6 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
         </div>
       )}
 
-      <Button onClick={() => setVentaAbierta(true)}>
-        <ShoppingCart className="size-4" aria-hidden="true" />
-        <span className="hidden sm:inline">Registrar venta</span>
-      </Button>
-
       <ThemeToggle />
 
       <div className="ml-1 hidden items-center gap-2 border-l border-border pl-3 md:flex">
@@ -180,11 +173,6 @@ function AppHeader({ alAbrirMenu }: AppHeaderProps) {
           </form>
         </DialogContent>
       </Dialog>
-
-      <DialogoRegistrarVenta
-        abierto={ventaAbierta}
-        onAbiertoCambio={setVentaAbierta}
-      />
     </header>
   );
 }
