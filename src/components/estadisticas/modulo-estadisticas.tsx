@@ -36,14 +36,21 @@ function rangoPreset(
   preset: Exclude<PresetRango, "personalizado">,
   hoy = new Date(),
 ): RangoEstadisticas {
-  const hasta = inicioDelDia(hoy);
+  const inicioHoy = inicioDelDia(hoy);
   if (preset === "hoy") {
-    return { desde: new Date(hasta), hasta };
+    return { desde: new Date(inicioHoy), hasta: inicioHoy };
   }
-  if (preset === "7d") {
-    return { desde: sumarDias(hasta, -6), hasta };
+  if (preset === "semana") {
+    // getDay() devuelve 0 para domingo; se desplaza para que la semana inicie lunes.
+    const desplazamientoLunes = (inicioHoy.getDay() + 6) % 7;
+    const lunes = sumarDias(inicioHoy, -desplazamientoLunes);
+
+    return { desde: lunes, hasta: sumarDias(lunes, 6) };
   }
-  return { desde: new Date(hasta.getFullYear(), hasta.getMonth(), 1), hasta };
+  return {
+    desde: new Date(inicioHoy.getFullYear(), inicioHoy.getMonth(), 1),
+    hasta: inicioHoy,
+  };
 }
 
 function CargandoEstadisticas() {
@@ -99,9 +106,9 @@ function AlertaError({
 
 /** Página de estadísticas: rango, KPIs y desgloses del período. */
 export function ModuloEstadisticas() {
-  const [preset, setPreset] = useState<PresetRango>("7d");
+  const [preset, setPreset] = useState<PresetRango>("semana");
   const [rango, setRango] = useState<RangoEstadisticas>(() =>
-    rangoPreset("7d"),
+    rangoPreset("semana"),
   );
   const [desdeInput, setDesdeInput] = useState(() => fechaAInput(rango.desde));
   const [hastaInput, setHastaInput] = useState(() => fechaAInput(rango.hasta));

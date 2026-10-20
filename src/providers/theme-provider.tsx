@@ -4,7 +4,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 /**
  * Proveedor de tema (claro/oscuro) basado en next-themes.
- * El tema por defecto sigue al sistema operativo y la preferencia se persiste.
+ * La aplicación inicia en modo claro y persiste la preferencia elegida.
  */
 export function ThemeProvider({
   children,

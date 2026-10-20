@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn, formatearFechaCorta } from "@/lib/utils";
 
-export type PresetRango = "hoy" | "7d" | "mes" | "personalizado";
+export type PresetRango = "hoy" | "semana" | "mes" | "personalizado";
 
 const OPCIONES: { valor: PresetRango; etiqueta: string }[] = [
   { valor: "hoy", etiqueta: "Hoy" },
-  { valor: "7d", etiqueta: "7 días" },
+  { valor: "semana", etiqueta: "Esta semana" },
   { valor: "mes", etiqueta: "Este mes" },
   { valor: "personalizado", etiqueta: "Personalizado" },
 ];
