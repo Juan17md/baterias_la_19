@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowDown,
   ArrowUp,
+  CircleDollarSign,
   Package,
   Plus,
   Power,
@@ -12,9 +13,12 @@ import {
   RefreshCw,
   Search,
   SearchX,
+  TrendingUp,
   TriangleAlert,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
+import { TarjetaKpi } from "@/components/estadisticas/tarjeta-kpi";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,12 +41,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTasa } from "@/hooks/use-tasa";
 import {
   calcularEstadoStock,
   cambiarActivoBateria,
   listarBaterias,
 } from "@/lib/servicios/baterias";
-import { cn } from "@/lib/utils";
+import { cn, formatearNumero } from "@/lib/utils";
 import type { Bateria, EstadoStock } from "@/types";
 import { BadgeEstadoStock } from "./badge-estado-stock";
 import { PrecioDual } from "./precio-dual";
@@ -81,8 +86,51 @@ function normalizar(texto: string): string {
     .toLowerCase();
 }
 
+type ResumenInventario = {
+  unidades: number;
+  totalInvertido: number;
+  gananciaTotal: number;
+  montoGeneral: number;
+  margen: number;
+};
+
+/**
+ * Valorización del stock actual (04_Arquitectura §5.10): costo, margen
+ * potencial y valor de venta de todas las unidades disponibles. Incluye los
+ * productos desactivados porque su stock sigue representando capital.
+ */
+function calcularResumenInventario(baterias: Bateria[]): ResumenInventario {
+  const resumen = baterias.reduce(
+    (acumulado, bateria) => {
+      if (bateria.stock <= 0) return acumulado;
+      acumulado.unidades += bateria.stock;
+      acumulado.totalInvertido += bateria.precioCompra * bateria.stock;
+      acumulado.montoGeneral += bateria.precioVenta * bateria.stock;
+      return acumulado;
+    },
+    { unidades: 0, totalInvertido: 0, montoGeneral: 0 },
+  );
+
+  const totalInvertido = Math.round(resumen.totalInvertido * 100) / 100;
+  const montoGeneral = Math.round(resumen.montoGeneral * 100) / 100;
+  const gananciaTotal = Math.round((montoGeneral - totalInvertido) * 100) / 100;
+  const margen =
+    montoGeneral > 0
+      ? Math.round((gananciaTotal / montoGeneral) * 1000) / 10
+      : 0;
+
+  return {
+    unidades: resumen.unidades,
+    totalInvertido,
+    gananciaTotal,
+    montoGeneral,
+    margen,
+  };
+}
+
 /** Módulo principal del inventario: tabla con búsqueda, filtros y paginación. */
 export function ModuloInventario() {
+  const { tasa } = useTasa();
   const [baterias, setBaterias] = useState<Bateria[]>([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState(false);
@@ -127,6 +175,16 @@ export function ModuloInventario() {
   const marcas = [...new Set(baterias.map((bateria) => bateria.marca))].sort(
     (a, b) => a.localeCompare(b, "es"),
   );
+
+  const resumen = calcularResumenInventario(baterias);
+  const bsInvertido =
+    tasa === null ? "—" : formatearNumero(resumen.totalInvertido * tasa.valor);
+  const bsGanancia =
+    tasa === null ? "—" : formatearNumero(resumen.gananciaTotal * tasa.valor);
+  const bsMontoGeneral =
+    tasa === null ? "—" : formatearNumero(resumen.montoGeneral * tasa.valor);
+  const etiquetaUnidades =
+    resumen.unidades === 1 ? "1 unidad" : `${resumen.unidades} unidades`;
 
   const termino = normalizar(busqueda.trim());
   const filtradas = baterias.filter((bateria) => {
@@ -247,6 +305,47 @@ export function ModuloInventario() {
           </>
         }
       />
+
+      {!errorCarga ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {cargando ? (
+            Array.from({ length: 3 }, (_, indice) => (
+              <div
+                key={indice}
+                className="rounded-lg border border-border bg-card p-5"
+              >
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="mt-3 h-8 w-32" />
+                <Skeleton className="mt-2 h-3 w-40" />
+              </div>
+            ))
+          ) : (
+            <>
+              <TarjetaKpi
+                etiqueta="Total invertido"
+                valor={`$ ${formatearNumero(resumen.totalInvertido)}`}
+                detalle={`Costo de ${etiquetaUnidades} · Bs ${bsInvertido}`}
+                icono={Wallet}
+                tono="info"
+              />
+              <TarjetaKpi
+                etiqueta="Ganancias totales"
+                valor={`$ ${formatearNumero(resumen.gananciaTotal)}`}
+                detalle={`Margen potencial (${formatearNumero(resumen.margen, 1)} %) · Bs ${bsGanancia}`}
+                icono={TrendingUp}
+                tono="success"
+              />
+              <TarjetaKpi
+                etiqueta="Monto general"
+                valor={`$ ${formatearNumero(resumen.montoGeneral)}`}
+                detalle={`Valor de venta del stock actual · Bs ${bsMontoGeneral}`}
+                icono={CircleDollarSign}
+                tono="primary"
+              />
+            </>
+          )}
+        </div>
+      ) : null}
 
       {cargando ? (
         <Card className="flex flex-col gap-3 p-6">
