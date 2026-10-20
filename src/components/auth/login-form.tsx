@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,6 +17,7 @@ function LoginForm() {
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [contrasenaVisible, setContrasenaVisible] = useState(false);
 
   useEffect(() => {
     if (!cargando && usuario && perfil) {
@@ -53,14 +54,9 @@ function LoginForm() {
             className="size-14 object-contain"
           />
         </span>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Iniciar sesión
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Accede con la cuenta que te asignó el administrador de la tienda.
-          </p>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Iniciar sesión
+        </h1>
       </div>
 
       <form onSubmit={manejarEnvio} className="flex flex-col gap-5">
@@ -85,17 +81,38 @@ function LoginForm() {
           <label htmlFor="contrasena" className="text-xs font-medium">
             Contraseña
           </label>
-          <Input
-            id="contrasena"
-            name="contrasena"
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={contrasena}
-            onChange={(evento) => setContrasena(evento.target.value)}
-            disabled={enviando}
-            required
-          />
+          <div className="relative">
+            <Input
+              id="contrasena"
+              name="contrasena"
+              type={contrasenaVisible ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={contrasena}
+              onChange={(evento) => setContrasena(evento.target.value)}
+              disabled={enviando}
+              required
+              className="pr-10"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute top-1/2 right-0.5 size-8 -translate-y-1/2 text-muted-foreground"
+              aria-label={
+                contrasenaVisible ? "Ocultar contraseña" : "Mostrar contraseña"
+              }
+              aria-pressed={contrasenaVisible}
+              disabled={enviando}
+              onClick={() => setContrasenaVisible((visible) => !visible)}
+            >
+              {contrasenaVisible ? (
+                <EyeOff className="size-4" aria-hidden="true" />
+              ) : (
+                <Eye className="size-4" aria-hidden="true" />
+              )}
+            </Button>
+          </div>
         </div>
 
         {error ? (
