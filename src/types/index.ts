@@ -120,3 +120,56 @@ export type Venta = {
   estado: EstadoVenta;
   anulacion: AnulacionVenta | null;
 };
+
+/** Rango inclusivo de días completos (hora local) para estadísticas. */
+export type RangoEstadisticas = {
+  desde: Date;
+  hasta: Date;
+};
+
+/** KPIs agregados de las ventas completadas en un período. */
+export type KpisEstadisticas = {
+  ingresosUsd: number;
+  ingresosBs: number;
+  ventas: number;
+  unidades: number;
+  ticketPromedio: number;
+};
+
+/** Punto diario de la serie de ventas e ingresos. */
+export type PuntoVentasDia = {
+  /** Clave local `YYYY-MM-DD`. */
+  fecha: string;
+  /** Etiqueta legible, por ejemplo `19 oct`. */
+  etiqueta: string;
+  totalUsd: number;
+  totalBs: number;
+  ventas: number;
+  unidades: number;
+};
+
+/** Producto agregado en el ranking de los más vendidos. */
+export type ProductoVendido = {
+  bateriaId: string;
+  codigo: string;
+  descripcion: string;
+  unidades: number;
+  /** Subtotal de los ítems antes del descuento de la venta. */
+  subtotal: number;
+};
+
+/** Participación de un método de pago dentro de los ingresos del período. */
+export type ResumenMetodoPago = {
+  metodo: MetodoPago;
+  totalUsd: number;
+  ventas: number;
+  porcentaje: number;
+};
+
+/** Resultado completo de la página de estadísticas. */
+export type EstadisticasPeriodo = {
+  kpis: KpisEstadisticas;
+  serie: PuntoVentasDia[];
+  productos: ProductoVendido[];
+  metodosPago: ResumenMetodoPago[];
+};

@@ -38,7 +38,10 @@ export function calcularEstadoStock(
   return stock <= stockMinimo ? "bajo" : "en_stock";
 }
 
-function mapearBateria(id: string, datos: Record<string, unknown>): Bateria {
+export function mapearBateria(
+  id: string,
+  datos: Record<string, unknown>,
+): Bateria {
   return {
     id,
     codigo: String(datos.codigo ?? ""),

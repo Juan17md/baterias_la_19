@@ -54,7 +54,7 @@ function mapearItem(datos: Record<string, unknown>): ItemVenta {
   };
 }
 
-function mapearVenta(id: string, datos: Record<string, unknown>): Venta {
+export function mapearVenta(id: string, datos: Record<string, unknown>): Venta {
   const cliente = datos.cliente as Record<string, unknown> | null | undefined;
   const vendedor = (datos.vendedor ?? {}) as Record<string, unknown>;
   const anulacion = datos.anulacion as

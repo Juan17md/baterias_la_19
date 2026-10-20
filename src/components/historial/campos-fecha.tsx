@@ -8,11 +8,15 @@ type Props = {
   hasta: string;
   onCambioDesde: (valor: string) => void;
   onCambioHasta: (valor: string) => void;
+  /** Id del mensaje de error para asociarlo a ambos campos. */
+  errorId?: string;
+  /** Marca los campos como inválidos cuando el rango no es válido. */
+  invalido?: boolean;
 };
 
 /**
- * Par de campos de fecha para los filtros del historial. Devuelve un fragmento
- * para encajar directamente en un grid junto al resto de filtros.
+ * Par de campos de fecha para los filtros del historial y de estadísticas.
+ * Devuelve un fragmento para encajar directamente en un grid.
  */
 export function CamposFecha({
   idPrefijo,
@@ -20,6 +24,8 @@ export function CamposFecha({
   hasta,
   onCambioDesde,
   onCambioHasta,
+  errorId,
+  invalido = false,
 }: Props) {
   return (
     <>
@@ -32,6 +38,8 @@ export function CamposFecha({
           type="date"
           value={desde}
           max={hasta || undefined}
+          aria-invalid={invalido || undefined}
+          aria-describedby={errorId}
           onChange={(evento) => onCambioDesde(evento.target.value)}
         />
       </div>
@@ -44,6 +52,8 @@ export function CamposFecha({
           type="date"
           value={hasta}
           min={desde || undefined}
+          aria-invalid={invalido || undefined}
+          aria-describedby={errorId}
           onChange={(evento) => onCambioHasta(evento.target.value)}
         />
       </div>
