@@ -10,6 +10,8 @@ export type Usuario = {
   email: string;
   rol: RolUsuario;
   activo: boolean;
+  /** `true` cuando la cuenta usa una contraseña temporal y debe cambiarla. */
+  debeCambiarContrasena: boolean;
   creadoEn: Timestamp | null;
 };
 

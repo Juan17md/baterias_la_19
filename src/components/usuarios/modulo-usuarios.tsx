@@ -432,7 +432,8 @@ export function ModuloUsuarios() {
             <DialogTitle>Nuevo usuario</DialogTitle>
             <DialogDescription>
               Se crea la cuenta con una contraseña temporal que deberás
-              compartir con la persona; podrá cambiarla más adelante.
+              compartir con la persona; en su primer inicio de sesión deberá
+              cambiarla antes de acceder al sistema.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={manejarAlta} className="flex flex-col gap-4">

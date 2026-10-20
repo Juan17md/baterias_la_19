@@ -23,11 +23,19 @@ service cloud.firestore {
     }
 
     // ---------- Usuarios ----------
-    // Gestión exclusiva del admin; cada usuario puede leer su propio perfil.
+    // Gestión exclusiva del admin; cada usuario puede leer su propio perfil
+    // y cerrar únicamente su marca de contraseña temporal.
     match /usuarios/{uid} {
       allow get: if esAdmin() || (estaAutenticado() && request.auth.uid == uid);
       allow list: if esAdmin();
-      allow create, update: if esAdmin();
+      allow create: if esAdmin();
+      allow update: if esAdmin() || (
+        estaActivo() &&
+        request.auth.uid == uid &&
+        resource.data.debeCambiarContrasena == true &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['debeCambiarContrasena']) &&
+        request.resource.data.debeCambiarContrasena == false
+      );
       allow delete: if false;
     }
 

@@ -19,6 +19,7 @@ function mapearUsuario(uid: string, datos: Record<string, unknown>): Usuario {
     email: String(datos.email ?? ""),
     rol: datos.rol === "admin" ? "admin" : "usuario",
     activo: datos.activo === true,
+    debeCambiarContrasena: datos.debeCambiarContrasena === true,
     creadoEn: (datos.creadoEn as Usuario["creadoEn"]) ?? null,
   };
 }
@@ -50,7 +51,18 @@ export async function crearPerfilUsuario(datos: {
     email: datos.email.trim().toLowerCase(),
     rol: datos.rol,
     activo: true,
+    debeCambiarContrasena: true,
     creadoEn: serverTimestamp(),
+  });
+}
+
+/**
+ * Marca como completado el cambio obligatorio de contraseña del propio usuario.
+ * La regla de Firestore solo permite modificar este campo y únicamente a `false`.
+ */
+export async function marcarContrasenaCambiada(uid: string): Promise<void> {
+  await updateDoc(doc(db, "usuarios", uid), {
+    debeCambiarContrasena: false,
   });
 }
 

@@ -15,6 +15,8 @@ export type EstadoAuth = {
   cargando: boolean;
   /** Cierra la sesión activa. */
   cerrarSesion: () => Promise<void>;
+  /** Vuelve a leer el perfil de Firestore (por ejemplo, tras cambiar la contraseña). */
+  recargarPerfil: () => Promise<void>;
 };
 
 export const ContextoAuth = createContext<EstadoAuth | null>(null);
@@ -77,8 +79,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   }, []);
 
+  const recargarPerfil = useCallback(async () => {
+    const usuarioActual = auth.currentUser;
+    if (!usuarioActual) {
+      throw new Error("No hay una sesión activa.");
+    }
+
+    const { obtenerPerfil } = await import("@/lib/servicios/usuarios");
+    const perfilEncontrado = await obtenerPerfil(usuarioActual.uid);
+
+    if (!perfilEncontrado || !perfilEncontrado.activo) {
+      await signOut(auth).catch(() => undefined);
+      setUsuario(null);
+      setPerfil(null);
+      throw new Error("Tu cuenta no tiene un perfil activo.");
+    }
+
+    setPerfil(perfilEncontrado);
+  }, []);
+
   return (
-    <ContextoAuth.Provider value={{ usuario, perfil, cargando, cerrarSesion }}>
+    <ContextoAuth.Provider
+      value={{ usuario, perfil, cargando, cerrarSesion, recargarPerfil }}
+    >
       {children}
     </ContextoAuth.Provider>
   );

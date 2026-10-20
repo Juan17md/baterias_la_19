@@ -21,7 +21,9 @@ function LoginForm() {
 
   useEffect(() => {
     if (!cargando && usuario && perfil) {
-      router.replace("/dashboard");
+      router.replace(
+        perfil.debeCambiarContrasena ? "/cambiar-contrasena" : "/dashboard",
+      );
     }
   }, [cargando, usuario, perfil, router]);
 

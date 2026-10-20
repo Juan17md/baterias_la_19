@@ -65,6 +65,7 @@ async function sembrarBase() {
       email: "admin@test.local",
       rol: "admin",
       activo: true,
+      debeCambiarContrasena: false,
       creadoEn: serverTimestamp(),
     });
     await setDoc(doc(fs, "usuarios", UID_USUARIO), {
@@ -72,6 +73,7 @@ async function sembrarBase() {
       email: "usuario@test.local",
       rol: "usuario",
       activo: true,
+      debeCambiarContrasena: true,
       creadoEn: serverTimestamp(),
     });
     await setDoc(doc(fs, "usuarios", UID_INACTIVO), {
@@ -79,6 +81,7 @@ async function sembrarBase() {
       email: "inactivo@test.local",
       rol: "usuario",
       activo: false,
+      debeCambiarContrasena: true,
       creadoEn: serverTimestamp(),
     });
     await setDoc(doc(fs, "baterias", "bat-1"), {
@@ -296,6 +299,38 @@ describe("usuario activo", () => {
     );
   });
 
+  it("puede marcar como completado el cambio obligatorio de su contraseña", async () => {
+    await assertSucceeds(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_USUARIO), {
+        debeCambiarContrasena: false,
+      }),
+    );
+  });
+
+  it("no puede modificar otros campos de su propio perfil", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_USUARIO), {
+        nombre: "Nombre alterado",
+      }),
+    );
+  });
+
+  it("no puede volver a activar la exigencia de cambio de contraseña", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_USUARIO), {
+        debeCambiarContrasena: true,
+      }),
+    );
+  });
+
+  it("no puede cambiar la marca de contraseña de otro usuario", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_ADMIN), {
+        debeCambiarContrasena: false,
+      }),
+    );
+  });
+
   it("no puede crear usuarios", async () => {
     await assertFails(
       setDoc(doc(comoUsuario(), "usuarios", "nuevo-uid"), {
@@ -375,6 +410,14 @@ describe("usuario inactivo", () => {
 
   it("puede leer su propio perfil (para conocer su estado)", async () => {
     await assertSucceeds(getDoc(doc(comoInactivo(), "usuarios", UID_INACTIVO)));
+  });
+
+  it("no puede marcar el cambio de contraseña como completado", async () => {
+    await assertFails(
+      updateDoc(doc(comoInactivo(), "usuarios", UID_INACTIVO), {
+        debeCambiarContrasena: false,
+      }),
+    );
   });
 });
 
@@ -518,7 +561,16 @@ describe("admin", () => {
         email: "nuevo@test.local",
         rol: "usuario",
         activo: true,
+        debeCambiarContrasena: true,
         creadoEn: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("puede exigir el cambio de contraseña de un usuario", async () => {
+    await assertSucceeds(
+      updateDoc(doc(comoAdmin(), "usuarios", UID_ADMIN), {
+        debeCambiarContrasena: true,
       }),
     );
   });
