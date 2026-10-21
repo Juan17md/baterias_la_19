@@ -32,9 +32,24 @@ service cloud.firestore {
       allow update: if esAdmin() || (
         estaActivo() &&
         request.auth.uid == uid &&
-        resource.data.debeCambiarContrasena == true &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['debeCambiarContrasena']) &&
-        request.resource.data.debeCambiarContrasena == false
+        (
+          // Cierre del cambio obligatorio de contraseña temporal.
+          (
+            ('debeCambiarContrasena' in resource.data) &&
+            resource.data.debeCambiarContrasena == true &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['debeCambiarContrasena']) &&
+            request.resource.data.debeCambiarContrasena == false
+          ) ||
+          // Cierre de la guía inicial. Los perfiles anteriores no tienen el campo.
+          (
+            (
+              !('onboardingCompletado' in resource.data) ||
+              resource.data.onboardingCompletado == false
+            ) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['onboardingCompletado']) &&
+            request.resource.data.onboardingCompletado == true
+          )
+        )
       );
       allow delete: if false;
     }

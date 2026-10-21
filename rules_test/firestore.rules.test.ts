@@ -23,6 +23,7 @@ import {
 const UID_ADMIN = "admin-prueba";
 const UID_USUARIO = "usuario-prueba";
 const UID_INACTIVO = "usuario-inactivo";
+const UID_LEGADO = "usuario-legado";
 
 let entorno: RulesTestEnvironment;
 
@@ -66,6 +67,7 @@ async function sembrarBase() {
       rol: "admin",
       activo: true,
       debeCambiarContrasena: false,
+      onboardingCompletado: false,
       creadoEn: serverTimestamp(),
     });
     await setDoc(doc(fs, "usuarios", UID_USUARIO), {
@@ -74,6 +76,7 @@ async function sembrarBase() {
       rol: "usuario",
       activo: true,
       debeCambiarContrasena: true,
+      onboardingCompletado: false,
       creadoEn: serverTimestamp(),
     });
     await setDoc(doc(fs, "usuarios", UID_INACTIVO), {
@@ -82,6 +85,16 @@ async function sembrarBase() {
       rol: "usuario",
       activo: false,
       debeCambiarContrasena: true,
+      onboardingCompletado: false,
+      creadoEn: serverTimestamp(),
+    });
+    // Perfil anterior a la guía: no tiene `onboardingCompletado`.
+    await setDoc(doc(fs, "usuarios", UID_LEGADO), {
+      nombre: "Usuario legado",
+      email: "legado@test.local",
+      rol: "usuario",
+      activo: true,
+      debeCambiarContrasena: false,
       creadoEn: serverTimestamp(),
     });
     await setDoc(doc(fs, "baterias", "bat-1"), {
@@ -173,6 +186,10 @@ function comoUsuario() {
 
 function comoInactivo() {
   return entorno.authenticatedContext(UID_INACTIVO).firestore();
+}
+
+function comoLegado() {
+  return entorno.authenticatedContext(UID_LEGADO).firestore();
 }
 
 beforeAll(async () => {
@@ -331,6 +348,52 @@ describe("usuario activo", () => {
     );
   });
 
+  it("puede marcar la guía inicial como completada", async () => {
+    await assertSucceeds(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_USUARIO), {
+        onboardingCompletado: true,
+      }),
+    );
+  });
+
+  it("puede completar la guía si el campo no existía", async () => {
+    await assertSucceeds(
+      updateDoc(doc(comoLegado(), "usuarios", UID_LEGADO), {
+        onboardingCompletado: true,
+      }),
+    );
+  });
+
+  it("no puede volver a mostrar la guía una vez completada", async () => {
+    await assertSucceeds(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_USUARIO), {
+        onboardingCompletado: true,
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_USUARIO), {
+        onboardingCompletado: false,
+      }),
+    );
+  });
+
+  it("no puede modificar otros campos al completar la guía", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_USUARIO), {
+        onboardingCompletado: true,
+        nombre: "Nombre alterado",
+      }),
+    );
+  });
+
+  it("no puede completar la guía de otro usuario", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "usuarios", UID_ADMIN), {
+        onboardingCompletado: true,
+      }),
+    );
+  });
+
   it("no puede crear usuarios", async () => {
     await assertFails(
       setDoc(doc(comoUsuario(), "usuarios", "nuevo-uid"), {
@@ -416,6 +479,14 @@ describe("usuario inactivo", () => {
     await assertFails(
       updateDoc(doc(comoInactivo(), "usuarios", UID_INACTIVO), {
         debeCambiarContrasena: false,
+      }),
+    );
+  });
+
+  it("no puede completar la guía inicial", async () => {
+    await assertFails(
+      updateDoc(doc(comoInactivo(), "usuarios", UID_INACTIVO), {
+        onboardingCompletado: true,
       }),
     );
   });
@@ -562,6 +633,7 @@ describe("admin", () => {
         rol: "usuario",
         activo: true,
         debeCambiarContrasena: true,
+        onboardingCompletado: false,
         creadoEn: serverTimestamp(),
       }),
     );

@@ -20,6 +20,8 @@ function mapearUsuario(uid: string, datos: Record<string, unknown>): Usuario {
     rol: datos.rol === "admin" ? "admin" : "usuario",
     activo: datos.activo === true,
     debeCambiarContrasena: datos.debeCambiarContrasena === true,
+    // Los perfiles anteriores a la guía no tienen el campo: deben verla una vez.
+    onboardingCompletado: datos.onboardingCompletado === true,
     creadoEn: (datos.creadoEn as Usuario["creadoEn"]) ?? null,
   };
 }
@@ -52,6 +54,7 @@ export async function crearPerfilUsuario(datos: {
     rol: datos.rol,
     activo: true,
     debeCambiarContrasena: true,
+    onboardingCompletado: false,
     creadoEn: serverTimestamp(),
   });
 }
@@ -63,6 +66,16 @@ export async function crearPerfilUsuario(datos: {
 export async function marcarContrasenaCambiada(uid: string): Promise<void> {
   await updateDoc(doc(db, "usuarios", uid), {
     debeCambiarContrasena: false,
+  });
+}
+
+/**
+ * Marca la guía inicial como completada para el propio usuario.
+ * La regla de Firestore solo permite modificar este campo, y únicamente a `true`.
+ */
+export async function marcarOnboardingCompletado(uid: string): Promise<void> {
+  await updateDoc(doc(db, "usuarios", uid), {
+    onboardingCompletado: true,
   });
 }
 

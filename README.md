@@ -30,6 +30,7 @@ Baterías La 19 es un negocio real que necesitaba reemplazar el control manual d
 - Indicadores diarios, estadísticas por período y valorización del inventario.
 - Gestión de usuarios con roles de administrador y vendedor.
 - Cambio obligatorio de la contraseña temporal en el primer inicio de sesión.
+- Guía inicial paso a paso para todos los usuarios, visible una sola vez.
 - Conversión de precios a bolívares con la tasa BCV vigente.
 
 La interfaz está completamente en español y fue diseñada para funcionar tanto en escritorio como en tablet y móvil.
@@ -61,6 +62,10 @@ Panel principal con los indicadores del día, últimas ventas y alertas de stock
 Autenticación con Firebase Authentication y perfiles almacenados en Firestore. Las reglas de seguridad validan el rol y el estado del usuario en cada operación, mientras que la interfaz adapta la navegación y las acciones disponibles según el perfil.
 
 Las cuentas nuevas se crean con una contraseña temporal y el sistema exige reemplazarla antes de permitir el acceso al panel.
+
+### Guía inicial
+
+Al ingresar por primera vez, cada usuario recibe una guía breve de cinco pasos que recorre la bienvenida, el dashboard, el inventario, las ventas y el historial, y las estadísticas con la tasa BCV. El avance se guarda en su perfil de Firestore, por lo que la guía se muestra una sola vez y no vuelve a aparecer al cambiar de dispositivo.
 
 ## Arquitectura
 

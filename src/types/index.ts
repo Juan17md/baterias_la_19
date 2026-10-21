@@ -12,6 +12,8 @@ export type Usuario = {
   activo: boolean;
   /** `true` cuando la cuenta usa una contraseña temporal y debe cambiarla. */
   debeCambiarContrasena: boolean;
+  /** `true` cuando el usuario ya completó la guía inicial del sistema. */
+  onboardingCompletado: boolean;
   creadoEn: Timestamp | null;
 };
 

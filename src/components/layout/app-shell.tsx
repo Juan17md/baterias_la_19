@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { ModalOnboarding } from "@/components/onboarding/modal-onboarding";
 
 /** Shell del dashboard: barra lateral + cabecera + contenido. */
 function AppShell({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <ModalOnboarding />
     </div>
   );
 }
