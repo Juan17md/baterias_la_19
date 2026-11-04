@@ -427,12 +427,13 @@ function sumarCampo(
 
 /** Suma de los pagos no anulados dentro de un rango de fechas. */
 async function cobrarPagosEnRango(desde: Date, hasta: Date): Promise<number> {
+  // Solo se suman importes, así que no hace falta ordenar. Sin `orderBy`, la
+  // consulta usa el índice de un solo campo `pagos.fecha` con alcance
+  // `COLLECTION_GROUP` declarado en `firestore.indexes.json`.
   const consulta = query(
     collectionGroup(db, "pagos"),
     where("fecha", ">=", Timestamp.fromDate(desde)),
     where("fecha", "<", Timestamp.fromDate(hasta)),
-    // El orden se apoya en el índice automático de un solo campo de `pagos`.
-    orderBy("fecha", "desc"),
   );
   const instantanea = await getDocs(consulta);
   return redondear2(

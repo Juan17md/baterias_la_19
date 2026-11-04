@@ -143,7 +143,8 @@ export function ModuloFinanciamientos() {
       try {
         const resumen = await obtenerKpisFinanciamientos();
         if (!cancelado) setKpis(resumen);
-      } catch {
+      } catch (fallo) {
+        console.error("KPI financiamientos:", fallo);
         if (!cancelado) setKpis(null);
       } finally {
         if (!cancelado) setCargandoKpis(false);
