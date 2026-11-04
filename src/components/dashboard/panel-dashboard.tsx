@@ -14,6 +14,7 @@ import {
   TrendingUp,
   TriangleAlert,
 } from "lucide-react";
+import { VentasCashea } from "@/components/dashboard/ventas-cashea";
 import { TarjetaKpi } from "@/components/estadisticas/tarjeta-kpi";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -323,6 +324,8 @@ export function PanelDashboard() {
           </div>
         </Card>
       </div>
+
+      <VentasCashea />
 
       <DialogoRegistrarVenta
         abierto={ventaAbierta}
