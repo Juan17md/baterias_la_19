@@ -31,6 +31,14 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { useTasa } from "@/hooks/use-tasa";
+import {
+  calcularPlanFinanciamiento,
+  CUOTAS_CASHEA,
+  DIAS_CASHEA,
+  MAXIMO_CUOTAS_TIENDA,
+  MAXIMO_DIAS_ENTRE_CUOTAS,
+  type PlanFinanciamientoCalculado,
+} from "@/lib/dominio/financiamientos";
 import { listarBaterias } from "@/lib/servicios/baterias";
 import { registrarVenta, type ResultadoVenta } from "@/lib/servicios/ventas";
 import {
@@ -39,8 +47,9 @@ import {
   normalizarTexto,
 } from "@/lib/utils";
 import { esquemaVenta, METODOS_PAGO } from "@/lib/validaciones/ventas";
-import type { Bateria, MetodoPago } from "@/types";
-import { ETIQUETAS_METODO_PAGO } from "./etiquetas";
+import type { Bateria, MetodoPago, ModalidadPago } from "@/types";
+import { ETIQUETAS_METODO_PAGO, ETIQUETAS_MODALIDAD_PAGO } from "./etiquetas";
+import { ResumenFinanciamiento } from "./resumen-financiamiento";
 
 const MAXIMO_RESULTADOS = 6;
 
@@ -78,6 +87,10 @@ export function DialogoRegistrarVenta({
   const [clienteTelefono, setClienteTelefono] = useState("");
   const [descuento, setDescuento] = useState("");
   const [metodoPago, setMetodoPago] = useState<MetodoPago>("efectivo_usd");
+  const [modalidadPago, setModalidadPago] = useState<ModalidadPago>("contado");
+  const [inicial, setInicial] = useState("");
+  const [numeroCuotas, setNumeroCuotas] = useState("3");
+  const [diasEntreCuotas, setDiasEntreCuotas] = useState("30");
   const [incluyeInstalacion, setIncluyeInstalacion] = useState(false);
   const [recibioBateriaUsada, setRecibioBateriaUsada] = useState(false);
   const [notas, setNotas] = useState("");
@@ -98,6 +111,10 @@ export function DialogoRegistrarVenta({
       setClienteTelefono("");
       setDescuento("");
       setMetodoPago("efectivo_usd");
+      setModalidadPago("contado");
+      setInicial("");
+      setNumeroCuotas("3");
+      setDiasEntreCuotas("30");
       setIncluyeInstalacion(false);
       setRecibioBateriaUsada(false);
       setNotas("");
@@ -159,6 +176,57 @@ export function DialogoRegistrarVenta({
   const descuentoExcedido = descuentoValido && descuentoNumero > subtotal;
   const total = descuentoValido ? subtotal - descuentoNumero : subtotal;
   const totalBs = tasa ? total * tasa.valor : null;
+  const esFinanciada = modalidadPago !== "contado";
+  const totalPrevio = Math.max(total, 0);
+  const diasPrevios =
+    modalidadPago === "cashea" ? DIAS_CASHEA : Number(diasEntreCuotas);
+
+  const vistaPrevia = useMemo<{
+    plan: PlanFinanciamientoCalculado | null;
+    error: string | null;
+  } | null>(() => {
+    if (modalidadPago === "contado") return null;
+    if (!(totalPrevio > 0)) {
+      return {
+        plan: null,
+        error: descuentoExcedido
+          ? "El descuento no puede superar el subtotal."
+          : "Agrega al menos una batería para calcular el plan.",
+      };
+    }
+    const inicialNumero =
+      inicial.trim() === "" ? 0 : Number(inicial.trim().replace(",", "."));
+    if (!Number.isFinite(inicialNumero) || inicialNumero < 0) {
+      return { plan: null, error: "Indica una inicial válida (puede ser 0)." };
+    }
+    try {
+      const plan = calcularPlanFinanciamiento({
+        modalidad: modalidadPago,
+        totalVenta: totalPrevio,
+        inicial: inicialNumero,
+        recargo: 0,
+        numeroCuotas: Number(numeroCuotas),
+        diasEntreCuotas: diasPrevios,
+        fechaVenta: new Date(),
+      });
+      return { plan, error: null };
+    } catch (fallo) {
+      return {
+        plan: null,
+        error:
+          fallo instanceof Error
+            ? fallo.message
+            : "Revisa los datos del plan de cuotas.",
+      };
+    }
+  }, [
+    modalidadPago,
+    totalPrevio,
+    inicial,
+    numeroCuotas,
+    diasPrevios,
+    descuentoExcedido,
+  ]);
 
   function manejarCambio(abiertoNuevo: boolean) {
     if (!abiertoNuevo && guardando) return;
@@ -170,6 +238,10 @@ export function DialogoRegistrarVenta({
       setClienteTelefono("");
       setDescuento("");
       setMetodoPago("efectivo_usd");
+      setModalidadPago("contado");
+      setInicial("");
+      setNumeroCuotas("3");
+      setDiasEntreCuotas("30");
       setIncluyeInstalacion(false);
       setRecibioBateriaUsada(false);
       setNotas("");
@@ -177,6 +249,31 @@ export function DialogoRegistrarVenta({
       setErrorServidor(null);
     }
     onAbiertoCambio(abiertoNuevo);
+  }
+
+  function limpiarError(campo: string) {
+    setErrores((anteriores) => {
+      if (!anteriores[campo]) return anteriores;
+      return { ...anteriores, [campo]: "" };
+    });
+  }
+
+  function cambiarModalidad(valor: string) {
+    const nueva = valor as ModalidadPago;
+    setModalidadPago(nueva);
+    setErrores({});
+    if (nueva === "cashea") {
+      setNumeroCuotas((actual) =>
+        (CUOTAS_CASHEA as readonly number[]).includes(Number(actual))
+          ? actual
+          : "3",
+      );
+      setDiasEntreCuotas(String(DIAS_CASHEA));
+      return;
+    }
+    if (nueva === "tienda" && Number(diasEntreCuotas) === DIAS_CASHEA) {
+      setDiasEntreCuotas("30");
+    }
   }
 
   function agregarBateria(bateria: Bateria) {
@@ -231,6 +328,19 @@ export function DialogoRegistrarVenta({
       clienteNombre,
       clienteTelefono,
       metodoPago,
+      modalidadPago,
+      financiamiento:
+        modalidadPago === "contado"
+          ? undefined
+          : {
+              inicial: inicial.trim() === "" ? "0" : inicial,
+              numeroCuotas,
+              diasEntreCuotas:
+                modalidadPago === "cashea"
+                  ? String(DIAS_CASHEA)
+                  : diasEntreCuotas,
+              recargo: "0",
+            },
       incluyeInstalacion,
       recibioBateriaUsada,
       notas,
@@ -238,7 +348,11 @@ export function DialogoRegistrarVenta({
     if (!validado.success) {
       const nuevos: Record<string, string> = {};
       for (const problema of validado.error.issues) {
-        const campo = String(problema.path[0] ?? "");
+        const ruta = problema.path.map(String);
+        const campo =
+          ruta[0] === "financiamiento" && ruta.length > 1
+            ? `financiamiento.${ruta[1]}`
+            : String(ruta[0] ?? "");
         if (campo && !nuevos[campo]) nuevos[campo] = problema.message;
       }
       setErrores(nuevos);
@@ -308,6 +422,13 @@ export function DialogoRegistrarVenta({
                   Tasa aplicada: {formatearNumero(resultado.tasaBCV, 4)} Bs/$ ·
                   El stock y los movimientos se actualizaron.
                 </p>
+                {resultado.modalidadPago !== "contado" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Plan de financiamiento creado (
+                    {ETIQUETAS_MODALIDAD_PAGO[resultado.modalidadPago]}). El
+                    calendario de cuotas está en el comprobante.
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                 <Button asChild variant="outline">
@@ -327,8 +448,8 @@ export function DialogoRegistrarVenta({
             <DialogHeader>
               <DialogTitle>Registrar venta</DialogTitle>
               <DialogDescription>
-                Descuenta el stock, crea los movimientos de salida y guarda el
-                consecutivo en una sola transacción.
+                Descuenta el stock, crea los movimientos de salida y, si aplica,
+                el plan de cuotas en una sola transacción.
               </DialogDescription>
             </DialogHeader>
             <form
@@ -660,30 +781,262 @@ export function DialogoRegistrarVenta({
                 </div>
               </section>
 
-              <section className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="venta-metodo" className="text-xs font-medium">
-                    Método de pago
-                  </label>
-                  <Select
-                    value={metodoPago}
-                    onValueChange={(valor) =>
-                      setMetodoPago(valor as MetodoPago)
-                    }
-                  >
-                    <SelectTrigger id="venta-metodo">
-                      <SelectValue placeholder="Selecciona un método" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {METODOS_PAGO.map((metodo) => (
-                        <SelectItem key={metodo} value={metodo}>
-                          {ETIQUETAS_METODO_PAGO[metodo]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <section className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      htmlFor="venta-modalidad"
+                      className="text-xs font-medium"
+                    >
+                      Modalidad de pago
+                    </label>
+                    <Select
+                      value={modalidadPago}
+                      onValueChange={cambiarModalidad}
+                    >
+                      <SelectTrigger id="venta-modalidad">
+                        <SelectValue placeholder="Selecciona una modalidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(["contado", "cashea", "tienda"] as const).map(
+                          (modalidad) => (
+                            <SelectItem key={modalidad} value={modalidad}>
+                              {ETIQUETAS_MODALIDAD_PAGO[modalidad]}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {modalidadPago === "contado"
+                        ? "Cobro completo al momento de la venta."
+                        : modalidadPago === "cashea"
+                          ? "La tienda recibe la inicial y Cashea liquida el saldo."
+                          : "Crédito directo de la tienda, sin recargo ni interés."}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      htmlFor="venta-metodo"
+                      className="text-xs font-medium"
+                    >
+                      {esFinanciada
+                        ? "Método de pago de la inicial"
+                        : "Método de pago"}
+                    </label>
+                    <Select
+                      value={metodoPago}
+                      onValueChange={(valor) =>
+                        setMetodoPago(valor as MetodoPago)
+                      }
+                    >
+                      <SelectTrigger id="venta-metodo">
+                        <SelectValue placeholder="Selecciona un método" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {METODOS_PAGO.map((metodo) => (
+                          <SelectItem key={metodo} value={metodo}>
+                            {ETIQUETAS_METODO_PAGO[metodo]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="flex flex-col justify-center gap-2 text-sm">
+
+                {esFinanciada ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label
+                          htmlFor="venta-inicial"
+                          className="text-xs font-medium"
+                        >
+                          Inicial ($)
+                        </label>
+                        <Input
+                          id="venta-inicial"
+                          name="inicial"
+                          value={inicial}
+                          onChange={(evento) => {
+                            setInicial(evento.target.value);
+                            limpiarError("financiamiento.inicial");
+                          }}
+                          placeholder="0,00"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          aria-invalid={
+                            errores["financiamiento.inicial"] ? true : undefined
+                          }
+                          aria-describedby={
+                            errores["financiamiento.inicial"]
+                              ? "venta-inicial-error"
+                              : undefined
+                          }
+                        />
+                        {errores["financiamiento.inicial"] ? (
+                          <p
+                            id="venta-inicial-error"
+                            role="alert"
+                            className="text-xs text-destructive-text"
+                          >
+                            {errores["financiamiento.inicial"]}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Puede ser 0.
+                          </p>
+                        )}
+                      </div>
+
+                      {modalidadPago === "cashea" ? (
+                        <div className="flex flex-col gap-1.5">
+                          <label
+                            htmlFor="venta-cuotas"
+                            className="text-xs font-medium"
+                          >
+                            Cuotas de Cashea
+                          </label>
+                          <Select
+                            value={numeroCuotas}
+                            onValueChange={(valor) => {
+                              setNumeroCuotas(valor);
+                              limpiarError("financiamiento.numeroCuotas");
+                            }}
+                          >
+                            <SelectTrigger id="venta-cuotas">
+                              <SelectValue placeholder="Selecciona cuotas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CUOTAS_CASHEA.map((cuotas) => (
+                                <SelectItem key={cuotas} value={String(cuotas)}>
+                                  {cuotas} {cuotas === 1 ? "cuota" : "cuotas"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {errores["financiamiento.numeroCuotas"] ? (
+                            <p
+                              id="venta-cuotas-error"
+                              role="alert"
+                              className="text-xs text-destructive-text"
+                            >
+                              {errores["financiamiento.numeroCuotas"]}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <label
+                            htmlFor="venta-cuotas"
+                            className="text-xs font-medium"
+                          >
+                            Número de cuotas
+                          </label>
+                          <Input
+                            id="venta-cuotas"
+                            name="numeroCuotas"
+                            type="number"
+                            min={1}
+                            max={MAXIMO_CUOTAS_TIENDA}
+                            step={1}
+                            value={numeroCuotas}
+                            onChange={(evento) => {
+                              setNumeroCuotas(evento.target.value);
+                              limpiarError("financiamiento.numeroCuotas");
+                            }}
+                            inputMode="numeric"
+                            autoComplete="off"
+                            aria-invalid={
+                              errores["financiamiento.numeroCuotas"]
+                                ? true
+                                : undefined
+                            }
+                            aria-describedby={
+                              errores["financiamiento.numeroCuotas"]
+                                ? "venta-cuotas-error"
+                                : undefined
+                            }
+                          />
+                          {errores["financiamiento.numeroCuotas"] ? (
+                            <p
+                              id="venta-cuotas-error"
+                              role="alert"
+                              className="text-xs text-destructive-text"
+                            >
+                              {errores["financiamiento.numeroCuotas"]}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+
+                      {modalidadPago === "cashea" ? (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-xs font-medium">
+                            Plazo entre cuotas
+                          </span>
+                          <p className="flex h-9 items-center rounded-md border border-border bg-muted px-3 text-sm text-muted-foreground">
+                            14 días (fijo)
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <label
+                            htmlFor="venta-dias"
+                            className="text-xs font-medium"
+                          >
+                            Días entre cuotas
+                          </label>
+                          <Input
+                            id="venta-dias"
+                            name="diasEntreCuotas"
+                            type="number"
+                            min={1}
+                            max={MAXIMO_DIAS_ENTRE_CUOTAS}
+                            step={1}
+                            value={diasEntreCuotas}
+                            onChange={(evento) => {
+                              setDiasEntreCuotas(evento.target.value);
+                              limpiarError("financiamiento.diasEntreCuotas");
+                            }}
+                            inputMode="numeric"
+                            autoComplete="off"
+                            aria-invalid={
+                              errores["financiamiento.diasEntreCuotas"]
+                                ? true
+                                : undefined
+                            }
+                            aria-describedby={
+                              errores["financiamiento.diasEntreCuotas"]
+                                ? "venta-dias-error"
+                                : undefined
+                            }
+                          />
+                          {errores["financiamiento.diasEntreCuotas"] ? (
+                            <p
+                              id="venta-dias-error"
+                              role="alert"
+                              className="text-xs text-destructive-text"
+                            >
+                              {errores["financiamiento.diasEntreCuotas"]}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              Entre 1 y {MAXIMO_DIAS_ENTRE_CUOTAS} días.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {errores.financiamiento ? (
+                      <p role="alert" className="text-xs text-destructive-text">
+                        {errores.financiamiento}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+
+                <div className="grid gap-2 text-sm sm:grid-cols-2">
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -711,13 +1064,28 @@ export function DialogoRegistrarVenta({
                 </div>
               </section>
 
+              {vistaPrevia ? (
+                <ResumenFinanciamiento
+                  modalidad={modalidadPago === "cashea" ? "cashea" : "tienda"}
+                  plan={vistaPrevia.plan}
+                  error={vistaPrevia.error}
+                  diasEntreCuotas={
+                    modalidadPago === "cashea"
+                      ? DIAS_CASHEA
+                      : Number(diasEntreCuotas) || 0
+                  }
+                />
+              ) : null}
+
               <section className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="venta-cliente"
                     className="text-xs font-medium"
                   >
-                    Cliente (opcional)
+                    {esFinanciada
+                      ? "Cliente (obligatorio)"
+                      : "Cliente (opcional)"}
                   </label>
                   <Input
                     id="venta-cliente"
@@ -725,13 +1093,12 @@ export function DialogoRegistrarVenta({
                     value={clienteNombre}
                     onChange={(evento) => {
                       setClienteNombre(evento.target.value);
-                      setErrores((anteriores) => ({
-                        ...anteriores,
-                        clienteNombre: "",
-                      }));
+                      limpiarError("clienteNombre");
                     }}
                     placeholder="Ej. Juan Pérez"
                     autoComplete="off"
+                    required={esFinanciada}
+                    aria-required={esFinanciada || undefined}
                     aria-invalid={errores.clienteNombre ? true : undefined}
                     aria-describedby={
                       errores.clienteNombre ? "venta-cliente-error" : undefined
@@ -752,19 +1119,39 @@ export function DialogoRegistrarVenta({
                     htmlFor="venta-telefono"
                     className="text-xs font-medium"
                   >
-                    Teléfono (opcional)
+                    {esFinanciada
+                      ? "Teléfono (obligatorio)"
+                      : "Teléfono (opcional)"}
                   </label>
                   <Input
                     id="venta-telefono"
                     name="telefono"
                     value={clienteTelefono}
-                    onChange={(evento) =>
-                      setClienteTelefono(evento.target.value)
-                    }
+                    onChange={(evento) => {
+                      setClienteTelefono(evento.target.value);
+                      limpiarError("clienteTelefono");
+                    }}
                     placeholder="Ej. 0414-1234567"
                     inputMode="tel"
                     autoComplete="tel"
+                    required={esFinanciada}
+                    aria-required={esFinanciada || undefined}
+                    aria-invalid={errores.clienteTelefono ? true : undefined}
+                    aria-describedby={
+                      errores.clienteTelefono
+                        ? "venta-telefono-error"
+                        : undefined
+                    }
                   />
+                  {errores.clienteTelefono ? (
+                    <p
+                      id="venta-telefono-error"
+                      role="alert"
+                      className="text-xs text-destructive-text"
+                    >
+                      {errores.clienteTelefono}
+                    </p>
+                  ) : null}
                 </div>
               </section>
 
@@ -817,7 +1204,8 @@ export function DialogoRegistrarVenta({
                     guardando ||
                     lineas.length === 0 ||
                     descuentoExcedido ||
-                    !tasa
+                    !tasa ||
+                    (esFinanciada && !vistaPrevia?.plan)
                   }
                 >
                   {guardando ? "Registrando…" : "Registrar venta"}
