@@ -9,6 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import {
   addDoc,
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
@@ -18,6 +19,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 
 const UID_ADMIN = "admin-prueba";
@@ -54,6 +56,68 @@ function datosTasa() {
     fuente: "dolarapi_oficial",
     fechaActualizacion: serverTimestamp(),
     actualizadoPor: null,
+  };
+}
+
+function datosFinanciamiento(sobrescrituras: Record<string, unknown> = {}) {
+  return {
+    ventaId: "venta-financiada",
+    numeroVenta: 2,
+    modalidad: "tienda",
+    cliente: { nombre: "Cliente financiado", telefono: "04140000000" },
+    totalVenta: 100,
+    inicial: 20,
+    metodoPagoInicial: "efectivo_usd",
+    recargo: 0,
+    montoFinanciado: 80,
+    numeroCuotas: 2,
+    montoCuota: 40,
+    diasEntreCuotas: 15,
+    fechaVenta: serverTimestamp(),
+    fechaPrimeraCuota: serverTimestamp(),
+    fechaUltimaCuota: serverTimestamp(),
+    tasaBCVVenta: 879.12,
+    cuotas: [
+      {
+        numero: 1,
+        monto: 40,
+        fechaVencimiento: new Date(),
+        estado: "pendiente",
+        pagoId: null,
+      },
+      {
+        numero: 2,
+        monto: 40,
+        fechaVencimiento: new Date(),
+        estado: "pendiente",
+        pagoId: null,
+      },
+    ],
+    cuotasPagadas: 0,
+    saldoPendiente: 80,
+    proximaCuotaNumero: 1,
+    proximaFechaVencimiento: serverTimestamp(),
+    estado: "activo",
+    liquidacion: null,
+    notas: null,
+    creadoEn: serverTimestamp(),
+    actualizadoEn: serverTimestamp(),
+    ...sobrescrituras,
+  };
+}
+
+function datosPago() {
+  return {
+    fecha: serverTimestamp(),
+    monto: 40,
+    metodoPago: "transferencia_bs",
+    referencia: null,
+    nota: null,
+    cuotaNumero: 1,
+    tasaBCV: 879.12,
+    montoBs: 35164.8,
+    anulacion: null,
+    creadoEn: serverTimestamp(),
   };
 }
 
@@ -121,6 +185,18 @@ async function sembrarBase() {
     });
     await setDoc(doc(fs, "contadores", "ventas"), { valor: 0 });
     await setDoc(doc(fs, "ventas", "venta-1"), datosVenta(UID_USUARIO));
+    await setDoc(doc(fs, "ventas", "venta-financiada"), {
+      ...datosVenta(UID_USUARIO),
+      numero: 2,
+      cliente: { nombre: "Cliente financiado", telefono: "04140000000" },
+      modalidadPago: "tienda",
+      financiamientoId: "fin-1",
+    });
+    await setDoc(doc(fs, "financiamientos", "fin-1"), datosFinanciamiento());
+    await setDoc(
+      doc(fs, "financiamientos", "fin-1", "pagos", "pago-1"),
+      datosPago(),
+    );
     await setDoc(doc(fs, "movimientos", "mov-manual"), {
       fecha: serverTimestamp(),
       tipo: "entrada",
@@ -670,6 +746,332 @@ describe("admin", () => {
 
   it("no puede borrar usuarios", async () => {
     await assertFails(deleteDoc(doc(comoAdmin(), "usuarios", UID_USUARIO)));
+  });
+});
+
+describe("financiamientos", () => {
+  it("sin sesión no puede leer ni crear financiamientos", async () => {
+    await assertFails(getDoc(doc(comoAnonimo(), "financiamientos", "fin-1")));
+    await assertFails(
+      setDoc(
+        doc(comoAnonimo(), "financiamientos", "fin-nuevo"),
+        datosFinanciamiento(),
+      ),
+    );
+  });
+
+  it("un usuario inactivo no puede leer ni crear financiamientos", async () => {
+    await assertFails(getDoc(doc(comoInactivo(), "financiamientos", "fin-1")));
+    await assertFails(
+      setDoc(
+        doc(comoInactivo(), "financiamientos", "fin-nuevo"),
+        datosFinanciamiento(),
+      ),
+    );
+  });
+
+  it("un usuario activo puede leer un financiamiento", async () => {
+    await assertSucceeds(
+      getDoc(doc(comoUsuario(), "financiamientos", "fin-1")),
+    );
+  });
+
+  it("un usuario activo puede crear un plan válido", async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-nuevo"),
+        datosFinanciamiento(),
+      ),
+    );
+  });
+
+  it("no puede crear un plan con modalidad de contado", async () => {
+    await assertFails(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-nuevo"),
+        datosFinanciamiento({ modalidad: "contado" }),
+      ),
+    );
+  });
+
+  it("no puede crear un plan cuya cantidad de cuotas no coincide", async () => {
+    await assertFails(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-nuevo"),
+        datosFinanciamiento({
+          cuotas: [
+            {
+              numero: 1,
+              monto: 80,
+              fechaVencimiento: new Date(),
+              estado: "pendiente",
+              pagoId: null,
+            },
+          ],
+        }),
+      ),
+    );
+  });
+
+  it("no puede crear un plan con método de pago inválido", async () => {
+    await assertFails(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-nuevo"),
+        datosFinanciamiento({ metodoPagoInicial: "bitcoin" }),
+      ),
+    );
+  });
+
+  it("no puede crear un plan con inicial mayor o igual al total", async () => {
+    await assertFails(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-nuevo"),
+        datosFinanciamiento({ inicial: 100 }),
+      ),
+    );
+  });
+
+  it("puede actualizar los campos derivados del cobro", async () => {
+    await assertSucceeds(
+      updateDoc(doc(comoUsuario(), "financiamientos", "fin-1"), {
+        cuotas: [
+          {
+            numero: 1,
+            monto: 40,
+            fechaVencimiento: new Date(),
+            estado: "pagada",
+            pagoId: "pago-1",
+          },
+          {
+            numero: 2,
+            monto: 40,
+            fechaVencimiento: new Date(),
+            estado: "pendiente",
+            pagoId: null,
+          },
+        ],
+        cuotasPagadas: 1,
+        saldoPendiente: 40,
+        proximaCuotaNumero: 2,
+        proximaFechaVencimiento: new Date(),
+        estado: "activo",
+        actualizadoEn: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("no puede modificar los datos originales del plan", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "financiamientos", "fin-1"), {
+        montoFinanciado: 1,
+      }),
+    );
+  });
+
+  it("no puede guardar un estado no permitido", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "financiamientos", "fin-1"), {
+        estado: "vencido",
+      }),
+    );
+  });
+
+  it("solo el admin puede eliminar un financiamiento", async () => {
+    await assertFails(
+      deleteDoc(doc(comoUsuario(), "financiamientos", "fin-1")),
+    );
+    await assertSucceeds(
+      deleteDoc(doc(comoAdmin(), "financiamientos", "fin-1")),
+    );
+  });
+});
+
+describe("pagos de financiamiento", () => {
+  it("sin sesión no puede leer ni crear pagos", async () => {
+    await assertFails(
+      getDoc(doc(comoAnonimo(), "financiamientos", "fin-1", "pagos", "pago-1")),
+    );
+    await assertFails(
+      setDoc(
+        doc(comoAnonimo(), "financiamientos", "fin-1", "pagos", "pago-2"),
+        datosPago(),
+      ),
+    );
+  });
+
+  it("un usuario activo puede leer y crear un pago válido", async () => {
+    await assertSucceeds(
+      getDoc(doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-1")),
+    );
+    await assertSucceeds(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-2"),
+        datosPago(),
+      ),
+    );
+  });
+
+  it("no puede crear un pago con monto cero", async () => {
+    await assertFails(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-2"),
+        { ...datosPago(), monto: 0 },
+      ),
+    );
+  });
+
+  it("no puede crear un pago con método inválido", async () => {
+    await assertFails(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-2"),
+        { ...datosPago(), metodoPago: "bitcoin" },
+      ),
+    );
+  });
+
+  it("no puede crear un pago ya anulado", async () => {
+    await assertFails(
+      setDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-2"),
+        {
+          ...datosPago(),
+          anulacion: { motivo: "Duplicado", fecha: new Date() },
+        },
+      ),
+    );
+  });
+
+  it("puede anular un pago con motivo obligatorio", async () => {
+    await assertSucceeds(
+      updateDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-1"),
+        { anulacion: { motivo: "Cobro duplicado", fecha: new Date() } },
+      ),
+    );
+  });
+
+  it("no puede anular sin motivo", async () => {
+    await assertFails(
+      updateDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-1"),
+        { anulacion: { motivo: "", fecha: new Date() } },
+      ),
+    );
+  });
+
+  it("no puede modificar el monto al anular", async () => {
+    await assertFails(
+      updateDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-1"),
+        { monto: 1 },
+      ),
+    );
+  });
+
+  it("solo el admin puede eliminar un pago", async () => {
+    await assertFails(
+      deleteDoc(
+        doc(comoUsuario(), "financiamientos", "fin-1", "pagos", "pago-1"),
+      ),
+    );
+    await assertSucceeds(
+      deleteDoc(
+        doc(comoAdmin(), "financiamientos", "fin-1", "pagos", "pago-1"),
+      ),
+    );
+  });
+
+  it("un usuario activo puede consultar los pagos de todos los planes", async () => {
+    const consulta = query(
+      collectionGroup(comoUsuario(), "pagos"),
+      where("fecha", ">=", new Date(2020, 0, 1)),
+      where("fecha", "<", new Date(2100, 0, 1)),
+    );
+    await assertSucceeds(getDocs(consulta));
+  });
+
+  it("sin sesión no puede consultar los pagos de todos los planes", async () => {
+    const consulta = query(
+      collectionGroup(comoAnonimo(), "pagos"),
+      where("fecha", ">=", new Date(2020, 0, 1)),
+      where("fecha", "<", new Date(2100, 0, 1)),
+    );
+    await assertFails(getDocs(consulta));
+  });
+
+  it("un usuario inactivo no puede consultar los pagos de todos los planes", async () => {
+    const consulta = query(
+      collectionGroup(comoInactivo(), "pagos"),
+      where("fecha", ">=", new Date(2020, 0, 1)),
+      where("fecha", "<", new Date(2100, 0, 1)),
+    );
+    await assertFails(getDocs(consulta));
+  });
+});
+
+describe("ventas financiadas", () => {
+  it("un usuario activo puede crear una venta financiada completa", async () => {
+    await assertSucceeds(
+      setDoc(doc(comoUsuario(), "ventas", "venta-fin-nueva"), {
+        ...datosVenta(UID_USUARIO),
+        cliente: { nombre: "Cliente nuevo", telefono: "04141111111" },
+        modalidadPago: "tienda",
+        financiamientoId: "fin-2",
+      }),
+    );
+  });
+
+  it("no puede crear una venta financiada sin plan asociado", async () => {
+    await assertFails(
+      setDoc(doc(comoUsuario(), "ventas", "venta-fin-nueva"), {
+        ...datosVenta(UID_USUARIO),
+        cliente: { nombre: "Cliente nuevo", telefono: "04141111111" },
+        modalidadPago: "tienda",
+        financiamientoId: null,
+      }),
+    );
+  });
+
+  it("no puede crear una venta financiada sin cliente", async () => {
+    await assertFails(
+      setDoc(doc(comoUsuario(), "ventas", "venta-fin-nueva"), {
+        ...datosVenta(UID_USUARIO),
+        cliente: null,
+        modalidadPago: "tienda",
+        financiamientoId: "fin-2",
+      }),
+    );
+  });
+
+  it("no puede crear una venta con modalidad desconocida", async () => {
+    await assertFails(
+      setDoc(doc(comoUsuario(), "ventas", "venta-fin-nueva"), {
+        ...datosVenta(UID_USUARIO),
+        cliente: { nombre: "Cliente nuevo", telefono: "04141111111" },
+        modalidadPago: "credito",
+        financiamientoId: "fin-2",
+      }),
+    );
+  });
+
+  it("no puede anular una venta financiada", async () => {
+    await assertFails(
+      updateDoc(doc(comoUsuario(), "ventas", "venta-financiada"), {
+        estado: "anulada",
+        anulacion: {
+          uid: UID_USUARIO,
+          nombre: "Usuario",
+          fecha: new Date(),
+          motivo: "Intento de anulación",
+        },
+      }),
+    );
+  });
+
+  it("el admin puede eliminar una venta financiada", async () => {
+    await assertSucceeds(
+      deleteDoc(doc(comoAdmin(), "ventas", "venta-financiada")),
+    );
   });
 });
 

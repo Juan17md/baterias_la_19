@@ -22,6 +22,18 @@ service cloud.firestore {
       return estaActivo() && perfilPropio().rol == 'admin';
     }
 
+    function esMetodoPagoValido(metodo) {
+      return metodo in [
+        'efectivo_bs',
+        'efectivo_usd',
+        'pago_movil',
+        'transferencia_bs',
+        'zelle',
+        'binance',
+        'punto_venta'
+      ];
+    }
+
     // ---------- Usuarios ----------
     // Gestión exclusiva del admin; cada usuario puede leer su propio perfil
     // y cerrar únicamente su marca de contraseña temporal.
@@ -82,16 +94,107 @@ service cloud.firestore {
         request.resource.data.vendedor.uid == request.auth.uid &&
         request.resource.data.estado == 'completada' &&
         request.resource.data.total >= 0 &&
-        request.resource.data.tasaBCV > 0;
+        request.resource.data.tasaBCV > 0 &&
+        (
+          // Las ventas anteriores a la Fase 9 no tienen `modalidadPago`.
+          !('modalidadPago' in request.resource.data) ||
+          request.resource.data.modalidadPago in ['contado', 'cashea', 'tienda']
+        ) &&
+        (
+          // Una venta financiada exige cliente identificable y plan asociado.
+          !('modalidadPago' in request.resource.data) ||
+          request.resource.data.modalidadPago == 'contado' ||
+          (
+            request.resource.data.financiamientoId is string &&
+            request.resource.data.financiamientoId.size() > 0 &&
+            request.resource.data.cliente.nombre is string &&
+            request.resource.data.cliente.nombre.size() > 0 &&
+            request.resource.data.cliente.telefono is string &&
+            request.resource.data.cliente.telefono.size() > 0
+          )
+        );
       // Solo anulación: cualquier usuario, con motivo obligatorio y auditoría.
+      // Las ventas financiadas no se anulan; el admin puede eliminarlas.
       allow update: if estaActivo() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'anulacion']) &&
         request.resource.data.estado == 'anulada' &&
         request.resource.data.anulacion.motivo is string &&
-        request.resource.data.anulacion.motivo.size() > 0;
+        request.resource.data.anulacion.motivo.size() > 0 &&
+        (
+          !('modalidadPago' in resource.data) ||
+          resource.data.modalidadPago == 'contado'
+        );
       // El admin puede eliminar la venta; la app repone stock si estaba
-      // completada y borra los movimientos asociados en la misma transacción.
+      // completada y borra movimientos, financiamiento y pagos asociados.
       allow delete: if esAdmin();
+    }
+
+    // ---------- Financiamientos ----------
+    // El plan se crea en la misma transacción que la venta. La forma del
+    // documento se valida aquí; los montos se recalculan en el servicio.
+    match /financiamientos/{financiamientoId} {
+      allow read: if estaActivo();
+      allow create: if estaActivo() &&
+        request.resource.data.modalidad in ['cashea', 'tienda'] &&
+        request.resource.data.estado == 'activo' &&
+        request.resource.data.ventaId is string &&
+        request.resource.data.ventaId.size() > 0 &&
+        request.resource.data.numeroVenta is int &&
+        request.resource.data.totalVenta > 0 &&
+        request.resource.data.inicial >= 0 &&
+        request.resource.data.inicial < request.resource.data.totalVenta &&
+        request.resource.data.montoFinanciado > 0 &&
+        request.resource.data.numeroCuotas is int &&
+        request.resource.data.numeroCuotas > 0 &&
+        request.resource.data.numeroCuotas <= 60 &&
+        request.resource.data.diasEntreCuotas is int &&
+        request.resource.data.diasEntreCuotas > 0 &&
+        request.resource.data.cuotas is list &&
+        request.resource.data.cuotas.size() == request.resource.data.numeroCuotas &&
+        esMetodoPagoValido(request.resource.data.metodoPagoInicial);
+      // Solo se actualizan campos derivados del cobro o de la liquidación.
+      allow update: if estaActivo() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'cuotas',
+          'cuotasPagadas',
+          'saldoPendiente',
+          'proximaCuotaNumero',
+          'proximaFechaVencimiento',
+          'estado',
+          'liquidacion',
+          'actualizadoEn'
+        ]) &&
+        request.resource.data.estado in ['activo', 'pagado', 'liquidado'];
+      // El admin elimina el plan al eliminar la venta (borrado en cascada).
+      allow delete: if esAdmin();
+
+      // ---------- Pagos de un financiamiento ----------
+      match /pagos/{pagoId} {
+        allow read: if estaActivo();
+        allow create: if estaActivo() &&
+          request.resource.data.monto > 0 &&
+          request.resource.data.montoBs > 0 &&
+          request.resource.data.tasaBCV > 0 &&
+          request.resource.data.cuotaNumero is int &&
+          request.resource.data.cuotaNumero > 0 &&
+          esMetodoPagoValido(request.resource.data.metodoPago) &&
+          request.resource.data.anulacion == null;
+        // La anulación no borra el pago: solo registra motivo y auditoría.
+        allow update: if estaActivo() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['anulacion']) &&
+          request.resource.data.anulacion.motivo is string &&
+          request.resource.data.anulacion.motivo.size() > 0;
+        allow delete: if esAdmin();
+      }
+    }
+
+    // ---------- Pagos de financiamiento (consulta agregada) ----------
+    // El módulo de financiamientos suma los cobros del mes con una consulta
+    // de grupo (`collectionGroup("pagos")`). La regla con comodín recursivo
+    // cubre cualquier ruta, porque la consulta se evalúa contra todos los
+    // documentos de la colección, sin importar su financiamiento de origen.
+    match /{ruta=**}/pagos/{pagoId} {
+      allow read: if estaActivo();
     }
 
     // ---------- Movimientos (inmutables salvo eliminación del admin) ----------

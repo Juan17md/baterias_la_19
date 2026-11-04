@@ -66,6 +66,53 @@
         { "fieldPath": "stockBajo", "order": "ASCENDING" },
         { "fieldPath": "marca", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "financiamientos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modalidad", "order": "ASCENDING" },
+        { "fieldPath": "fechaVenta", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "financiamientos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fechaVenta", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "financiamientos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modalidad", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fechaVenta", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "financiamientos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "proximaFechaVencimiento", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "financiamientos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modalidad", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "proximaFechaVencimiento", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pagos",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "fecha", "order": "DESCENDING" }]
     }
   ],
   "fieldOverrides": []

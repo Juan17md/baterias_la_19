@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  esquemaPlanFinanciamiento,
+  validarReglasCashea,
+} from "@/lib/validaciones/financiamientos";
+import { METODOS_PAGO } from "@/lib/validaciones/metodos-pago";
+
+export { METODOS_PAGO };
 
 /** Convierte texto de formularios a número (acepta coma decimal). */
 function aNumero(valor: unknown): unknown {
@@ -9,16 +16,8 @@ function aNumero(valor: unknown): unknown {
   return valor;
 }
 
-/** Métodos de pago aceptados (se espejan en `MetodoPago`). */
-export const METODOS_PAGO = [
-  "efectivo_bs",
-  "efectivo_usd",
-  "pago_movil",
-  "transferencia_bs",
-  "zelle",
-  "binance",
-  "punto_venta",
-] as const;
+/** Modalidades de pago de una venta (se espejan en `ModalidadPago`). */
+export const MODALIDADES_PAGO = ["contado", "cashea", "tienda"] as const;
 
 /** Acepta un descuento vacío como 0 (campo opcional del formulario). */
 const descuentoOpcional = z.preprocess(
@@ -60,6 +59,12 @@ export const esquemaVenta = z
       .optional()
       .default(""),
     metodoPago: z.enum(METODOS_PAGO, { error: "Selecciona un método de pago" }),
+    /** En ventas financiadas, `metodoPago` es el método de la inicial. */
+    modalidadPago: z
+      .enum(MODALIDADES_PAGO, { error: "Selecciona la modalidad de pago" })
+      .optional()
+      .default("contado"),
+    financiamiento: esquemaPlanFinanciamiento.optional(),
     incluyeInstalacion: z.boolean(),
     recibioBateriaUsada: z.boolean(),
     notas: z
@@ -70,11 +75,66 @@ export const esquemaVenta = z
       .default(""),
   })
   .superRefine((datos, contexto) => {
-    if (datos.clienteTelefono && !datos.clienteNombre) {
+    if (datos.modalidadPago === "contado") {
+      if (datos.financiamiento) {
+        contexto.addIssue({
+          code: "custom",
+          path: ["financiamiento"],
+          message: "Una venta de contado no lleva plan de financiamiento",
+        });
+      }
+      if (datos.clienteTelefono && !datos.clienteNombre) {
+        contexto.addIssue({
+          code: "custom",
+          path: ["clienteNombre"],
+          message: "Indica el nombre del cliente",
+        });
+      }
+      return;
+    }
+
+    if (!datos.financiamiento) {
+      contexto.addIssue({
+        code: "custom",
+        path: ["financiamiento"],
+        message: "Completa los datos del financiamiento",
+      });
+      return;
+    }
+
+    if (!datos.clienteNombre) {
       contexto.addIssue({
         code: "custom",
         path: ["clienteNombre"],
-        message: "Indica el nombre del cliente",
+        message: "Indica el nombre del cliente para financiar",
+      });
+    }
+    if (!datos.clienteTelefono) {
+      contexto.addIssue({
+        code: "custom",
+        path: ["clienteTelefono"],
+        message: "Indica el teléfono del cliente para financiar",
+      });
+    }
+
+    if (datos.modalidadPago === "cashea") {
+      for (const regla of validarReglasCashea(datos.financiamiento)) {
+        contexto.addIssue({
+          code: "custom",
+          path: ["financiamiento", regla.campo],
+          message: regla.mensaje,
+        });
+      }
+    }
+
+    if (
+      datos.modalidadPago === "tienda" &&
+      datos.financiamiento.recargo !== 0
+    ) {
+      contexto.addIssue({
+        code: "custom",
+        path: ["financiamiento", "recargo"],
+        message: "Las ventas «Por la tienda» no aplican recargos",
       });
     }
   });

@@ -18,15 +18,18 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/firestore";
 import { calcularStockBajo } from "@/lib/servicios/baterias";
+import { construirDocumentoFinanciamiento } from "@/lib/servicios/financiamientos";
 import {
   esquemaAnulacionVenta,
   esquemaVenta,
+  MODALIDADES_PAGO,
   type DatosVenta,
 } from "@/lib/validaciones/ventas";
 import type {
   EstadoVenta,
   ItemVenta,
   MetodoPago,
+  ModalidadPago,
   ResumenUsuario,
   Venta,
 } from "@/types";
@@ -65,6 +68,11 @@ export function mapearVenta(id: string, datos: Record<string, unknown>): Venta {
   const metodoPago = METODOS_VALIDOS.includes(datos.metodoPago as MetodoPago)
     ? (datos.metodoPago as MetodoPago)
     : "efectivo_usd";
+  const modalidadPago = MODALIDADES_PAGO.includes(
+    datos.modalidadPago as ModalidadPago,
+  )
+    ? (datos.modalidadPago as ModalidadPago)
+    : "contado";
 
   return {
     id,
@@ -83,6 +91,9 @@ export function mapearVenta(id: string, datos: Record<string, unknown>): Venta {
     tasaBCV: Number(datos.tasaBCV ?? 0),
     totalBs: Number(datos.totalBs ?? 0),
     metodoPago,
+    modalidadPago,
+    financiamientoId:
+      datos.financiamientoId == null ? null : String(datos.financiamientoId),
     incluyeInstalacion: datos.incluyeInstalacion === true,
     recibioBateriaUsada: datos.recibioBateriaUsada === true,
     vendedor: {
@@ -108,6 +119,8 @@ export type ResultadoVenta = {
   total: number;
   totalBs: number;
   tasaBCV: number;
+  modalidadPago: ModalidadPago;
+  financiamientoId: string | null;
 };
 
 /**
@@ -129,6 +142,8 @@ export async function registrarVenta(
     clienteNombre,
     clienteTelefono,
     metodoPago,
+    modalidadPago,
+    financiamiento,
     incluyeInstalacion,
     recibioBateriaUsada,
     notas,
@@ -223,6 +238,33 @@ export async function registrarVenta(
     const numero = Number(contadorSnap.data()?.valor ?? 0) + 1;
     const ventaRef = doc(collection(db, COLECCION));
 
+    let financiamientoId: string | null = null;
+    if (modalidadPago !== "contado") {
+      if (!financiamiento) {
+        throw new Error("Completa los datos del financiamiento.");
+      }
+      const financiamientoRef = doc(collection(db, "financiamientos"));
+      financiamientoId = financiamientoRef.id;
+      transaccion.set(
+        financiamientoRef,
+        construirDocumentoFinanciamiento({
+          ventaId: ventaRef.id,
+          numeroVenta: numero,
+          modalidad: modalidadPago,
+          cliente: { nombre: clienteNombre, telefono: clienteTelefono },
+          totalVenta: total,
+          inicial: financiamiento.inicial,
+          metodoPagoInicial: metodoPago,
+          recargo: financiamiento.recargo,
+          numeroCuotas: financiamiento.numeroCuotas,
+          diasEntreCuotas: financiamiento.diasEntreCuotas,
+          fechaVenta: new Date(),
+          tasaBCV,
+          notas: notas === "" ? null : notas,
+        }),
+      );
+    }
+
     for (const linea of lineas) {
       transaccion.update(linea.referencia, {
         stock: linea.stockDespues,
@@ -267,6 +309,8 @@ export async function registrarVenta(
       tasaBCV,
       totalBs,
       metodoPago,
+      modalidadPago,
+      financiamientoId,
       incluyeInstalacion,
       recibioBateriaUsada,
       vendedor: { uid: usuario.uid, nombre: usuario.nombre },
@@ -275,7 +319,15 @@ export async function registrarVenta(
       anulacion: null,
     });
 
-    return { id: ventaRef.id, numero, total, totalBs, tasaBCV };
+    return {
+      id: ventaRef.id,
+      numero,
+      total,
+      totalBs,
+      tasaBCV,
+      modalidadPago,
+      financiamientoId,
+    };
   });
 }
 
@@ -368,6 +420,12 @@ export async function anularVenta(
     if (venta.estado === "anulada") {
       throw new Error("Esta venta ya está anulada.");
     }
+    const modalidad = String(venta.modalidadPago ?? "contado");
+    if (modalidad === "cashea" || modalidad === "tienda") {
+      throw new Error(
+        "No se puede anular una venta financiada. Solicita al administrador eliminarla.",
+      );
+    }
     const numero = Number(venta.numero ?? 0);
     const items = Array.isArray(venta.items)
       ? (venta.items as Record<string, unknown>[])
@@ -451,10 +509,24 @@ export async function anularVenta(
  * repuesto y solo se borra el comprobante. El consecutivo no se reutiliza.
  */
 export async function eliminarVenta(ventaId: string): Promise<void> {
-  // Los movimientos se buscan fuera de la transacción (no admite queries).
+  // Los movimientos y el financiamiento se buscan fuera de la transacción
+  // porque `runTransaction` no admite consultas.
   const movimientos = await getDocs(
     query(collection(db, "movimientos"), where("ventaId", "==", ventaId)),
   );
+  const financiamientos = await getDocs(
+    query(
+      collection(db, "financiamientos"),
+      where("ventaId", "==", ventaId),
+      limit(1),
+    ),
+  );
+  const financiamiento = financiamientos.docs[0] ?? null;
+  const pagos = financiamiento
+    ? await getDocs(
+        collection(db, "financiamientos", financiamiento.id, "pagos"),
+      )
+    : null;
 
   await runTransaction(db, async (transaccion) => {
     const ventaRef = doc(db, COLECCION, ventaId);
@@ -528,6 +600,12 @@ export async function eliminarVenta(ventaId: string): Promise<void> {
     for (const movimiento of movimientos.docs) {
       transaccion.delete(movimiento.ref);
     }
+    if (financiamiento) {
+      transaccion.delete(financiamiento.ref);
+      for (const pago of pagos?.docs ?? []) {
+        transaccion.delete(pago.ref);
+      }
+    }
   });
 
   // Limpieza de movimientos que hayan aparecido durante una anulación concurrente.
@@ -540,5 +618,19 @@ export async function eliminarVenta(ventaId: string): Promise<void> {
       lote.delete(documento.ref);
     }
     await lote.commit();
+  }
+
+  // Limpieza de pagos que hayan aparecido durante una anulación concurrente.
+  if (financiamiento) {
+    const pagosRestantes = await getDocs(
+      collection(db, "financiamientos", financiamiento.id, "pagos"),
+    );
+    if (!pagosRestantes.empty) {
+      const lote = writeBatch(db);
+      for (const documento of pagosRestantes.docs) {
+        lote.delete(documento.ref);
+      }
+      await lote.commit();
+    }
   }
 }

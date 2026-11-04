@@ -83,6 +83,9 @@ export type MetodoPago =
   | "binance"
   | "punto_venta";
 
+/** Modalidad con la que se paga una venta. */
+export type ModalidadPago = "contado" | "cashea" | "tienda";
+
 /** Estado lógico de una venta (la anulación nunca borra el documento). */
 export type EstadoVenta = "completada" | "anulada";
 
@@ -117,12 +120,102 @@ export type Venta = {
   tasaBCV: number;
   totalBs: number;
   metodoPago: MetodoPago;
+  /** `contado` en ventas anteriores a la Fase 9. */
+  modalidadPago: ModalidadPago;
+  /** ID del plan en `financiamientos`; `null` en ventas de contado. */
+  financiamientoId: string | null;
   incluyeInstalacion: boolean;
   recibioBateriaUsada: boolean;
   vendedor: ResumenUsuario;
   notas: string | null;
   estado: EstadoVenta;
   anulacion: AnulacionVenta | null;
+};
+
+/** Estado persistido de un financiamiento. */
+export type EstadoFinanciamiento = "activo" | "pagado" | "liquidado";
+
+/** Estado visible: añade `vencido`, que se deriva por fecha y no se persiste. */
+export type EstadoFinanciamientoVisible = EstadoFinanciamiento | "vencido";
+
+/** Estado de una cuota dentro del calendario del financiamiento. */
+export type EstadoCuota = "pendiente" | "pagada" | "vencida" | "informativa";
+
+/** Cuota embebida en `financiamientos/{id}.cuotas`. */
+export type CuotaFinanciamiento = {
+  numero: number;
+  monto: number;
+  fechaVencimiento: Timestamp | null;
+  estado: EstadoCuota;
+  /** Pago asociado cuando la cuota está pagada. */
+  pagoId: string | null;
+};
+
+/** Liquidación semanal que Cashea transfiere a la tienda. */
+export type LiquidacionCashea = {
+  montoEsperado: number;
+  fechaEsperada: Timestamp | null;
+  estado: "pendiente" | "recibida";
+  montoRecibido: number | null;
+  fechaRecibida: Timestamp | null;
+  /** Comisión de Cashea; `0` hasta que el negocio la defina. */
+  comision: number;
+  referencia: string | null;
+};
+
+/** Documento `financiamientos/{id}` de Firestore. */
+export type Financiamiento = {
+  id: string;
+  ventaId: string;
+  numeroVenta: number;
+  modalidad: Exclude<ModalidadPago, "contado">;
+  cliente: { nombre: string; telefono: string };
+  totalVenta: number;
+  inicial: number;
+  metodoPagoInicial: MetodoPago;
+  /** Recargo de «Por la tienda»; `0` hasta que el negocio lo defina. */
+  recargo: number;
+  montoFinanciado: number;
+  numeroCuotas: number;
+  montoCuota: number;
+  diasEntreCuotas: number;
+  fechaVenta: Timestamp | null;
+  fechaPrimeraCuota: Timestamp | null;
+  fechaUltimaCuota: Timestamp | null;
+  tasaBCVVenta: number;
+  cuotas: CuotaFinanciamiento[];
+  cuotasPagadas: number;
+  saldoPendiente: number;
+  proximaCuotaNumero: number | null;
+  proximaFechaVencimiento: Timestamp | null;
+  estado: EstadoFinanciamiento;
+  /** Estado calculado al leer (incluye `vencido`). */
+  estadoDerivado: EstadoFinanciamientoVisible;
+  liquidacion: LiquidacionCashea | null;
+  notas: string | null;
+  creadoEn: Timestamp | null;
+  actualizadoEn: Timestamp | null;
+};
+
+/** Auditoría de la anulación de un pago (el pago no se borra). */
+export type AnulacionPago = {
+  motivo: string;
+  fecha: Timestamp | null;
+};
+
+/** Documento `financiamientos/{id}/pagos/{pagoId}` de Firestore. */
+export type PagoFinanciamiento = {
+  id: string;
+  fecha: Timestamp | null;
+  monto: number;
+  metodoPago: MetodoPago;
+  referencia: string | null;
+  nota: string | null;
+  cuotaNumero: number;
+  tasaBCV: number;
+  montoBs: number;
+  anulacion: AnulacionPago | null;
+  creadoEn: Timestamp | null;
 };
 
 /** Rango inclusivo de días completos (hora local) para estadísticas. */
