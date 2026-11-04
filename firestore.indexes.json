@@ -108,11 +108,6 @@
         { "fieldPath": "estado", "order": "ASCENDING" },
         { "fieldPath": "proximaFechaVencimiento", "order": "ASCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "pagos",
-      "queryScope": "COLLECTION",
-      "fields": [{ "fieldPath": "fecha", "order": "DESCENDING" }]
     }
   ],
   "fieldOverrides": []

@@ -431,7 +431,7 @@ async function cobrarPagosEnRango(desde: Date, hasta: Date): Promise<number> {
     collectionGroup(db, "pagos"),
     where("fecha", ">=", Timestamp.fromDate(desde)),
     where("fecha", "<", Timestamp.fromDate(hasta)),
-    // El orden explícito coincide con el índice de grupo de «pagos».
+    // El orden se apoya en el índice automático de un solo campo de `pagos`.
     orderBy("fecha", "desc"),
   );
   const instantanea = await getDocs(consulta);
