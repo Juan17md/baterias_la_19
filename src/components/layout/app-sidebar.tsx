@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  HandCoins,
   History,
   LayoutDashboard,
   LogOut,
@@ -35,6 +36,12 @@ const NAVEGACION = [
     etiqueta: "Historial",
     href: "/dashboard/historial",
     icono: History,
+    soloAdmin: false,
+  },
+  {
+    etiqueta: "Financiamientos",
+    href: "/dashboard/financiamientos",
+    icono: HandCoins,
     soloAdmin: false,
   },
   {
