@@ -15,6 +15,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { VentasCashea } from "@/components/dashboard/ventas-cashea";
+import { CobrosTienda } from "@/components/dashboard/cobros-tienda";
 import { TarjetaKpi } from "@/components/estadisticas/tarjeta-kpi";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -326,6 +327,8 @@ export function PanelDashboard() {
       </div>
 
       <VentasCashea />
+
+      <CobrosTienda />
 
       <DialogoRegistrarVenta
         abierto={ventaAbierta}

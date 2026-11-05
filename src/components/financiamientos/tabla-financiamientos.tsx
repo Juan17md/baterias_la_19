@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CircleDollarSign, Eye } from "lucide-react";
+import { CircleDollarSign, Eye, HandCoins } from "lucide-react";
 import { BadgeEstadoFinanciamiento } from "@/components/financiamientos/badge-estado-financiamiento";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ type Props = {
     financiamiento: Financiamiento,
     cuota: CuotaFinanciamiento,
   ) => void;
+  /** Abre el diálogo de liquidación de Cashea. */
+  onLiquidar: (financiamiento: Financiamiento) => void;
 };
 
 function BadgeModalidad({
@@ -41,6 +43,7 @@ export function TablaFinanciamientos({
   cargandoMas,
   onCargarMas,
   onCobrar,
+  onLiquidar,
 }: Props) {
   return (
     <div className="overflow-x-auto rounded-md border border-border">
@@ -173,6 +176,19 @@ export function TablaFinanciamientos({
                           aria-hidden="true"
                         />
                         Cobrar
+                      </Button>
+                    ) : null}
+                    {financiamiento.modalidad === "cashea" &&
+                    liquidacion?.estado === "pendiente" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onLiquidar(financiamiento)}
+                        aria-label={`Liquidar el saldo de Cashea de ${financiamiento.cliente.nombre}`}
+                      >
+                        <HandCoins className="size-4" aria-hidden="true" />
+                        Liquidar
                       </Button>
                     ) : null}
                     <Button asChild variant="ghost" size="sm">

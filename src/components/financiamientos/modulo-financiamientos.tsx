@@ -26,6 +26,7 @@ import {
 import { fechaDesdeInput, formatearNumero, normalizarTexto } from "@/lib/utils";
 import type { CuotaFinanciamiento, Financiamiento } from "@/types";
 import { DialogoRegistrarPago } from "./dialogo-registrar-pago";
+import { DialogoLiquidarCashea } from "./dialogo-liquidar-cashea";
 import {
   FiltrosFinanciamientos,
   type EstadoFiltro,
@@ -62,6 +63,8 @@ export function ModuloFinanciamientos() {
   const [hasta, setHasta] = useState("");
 
   const [cobro, setCobro] = useState<CobroPendiente | null>(null);
+  const [liquidacionCashea, setLiquidacionCashea] =
+    useState<Financiamiento | null>(null);
 
   const rangoInvalido = Boolean(desde && hasta && desde > hasta);
   const hayFiltros =
@@ -188,6 +191,10 @@ export function ModuloFinanciamientos() {
     cuota: CuotaFinanciamiento,
   ) {
     setCobro({ financiamiento, cuota });
+  }
+
+  function abrirLiquidacion(financiamiento: Financiamiento) {
+    setLiquidacionCashea(financiamiento);
   }
 
   return (
@@ -327,6 +334,7 @@ export function ModuloFinanciamientos() {
           cargandoMas={cargandoMas}
           onCargarMas={() => void cargarMas()}
           onCobrar={abrirCobro}
+          onLiquidar={abrirLiquidacion}
         />
       )}
 
@@ -339,6 +347,17 @@ export function ModuloFinanciamientos() {
           financiamiento={cobro.financiamiento}
           cuota={cobro.cuota}
           onRegistrado={() => setRecarga((valor) => valor + 1)}
+        />
+      ) : null}
+
+      {liquidacionCashea ? (
+        <DialogoLiquidarCashea
+          abierto
+          onAbiertoCambio={(abierto) => {
+            if (!abierto) setLiquidacionCashea(null);
+          }}
+          financiamiento={liquidacionCashea}
+          onConfirmado={() => setRecarga((valor) => valor + 1)}
         />
       ) : null}
     </div>

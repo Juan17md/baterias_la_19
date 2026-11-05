@@ -68,7 +68,8 @@ export function useVentasCashea(): {
 
   // Artículos vendidos: una sola consulta con `in` para todos los planes.
   useEffect(() => {
-    const ids = planes.map((plan) => plan.ventaId).filter(Boolean);
+    // La venta guarda el ID del plan en `financiamientoId`, no el ID de la venta.
+    const ids = planes.map((plan) => plan.id).filter(Boolean);
     // Sin planes no hay filas que mostrar; el mapa anterior no se consulta.
     if (ids.length === 0) return;
 
