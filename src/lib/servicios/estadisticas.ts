@@ -11,8 +11,10 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/firestore";
+import { calcularCobranzaPeriodo } from "@/lib/dominio/financiamientos";
 import { contarDiasInclusivos, inicioDelDia, sumarDias } from "@/lib/utils";
 import type {
+  CobranzaPeriodo,
   EstadisticasPeriodo,
   KpisEstadisticas,
   MetodoPago,
@@ -22,6 +24,12 @@ import type {
   ResumenMetodoPago,
   Venta,
 } from "@/types";
+import {
+  obtenerKpisFinanciamientos,
+  sumarInicialesEnRango,
+  sumarLiquidacionesEnRango,
+  sumarPagosEnRango,
+} from "./financiamientos";
 import { mapearVenta } from "./ventas";
 
 const COLECCION_VENTAS = "ventas";
@@ -174,6 +182,41 @@ export function calcularMetodosPago(ventas: Venta[]): ResumenMetodoPago[] {
 }
 
 /**
+ * Calcula el cobrado del período y el saldo pendiente actual de la tienda.
+ *
+ * El cobrado suma las ventas de contado y, de las financiadas, las iniciales
+ * del rango, las cuotas no anuladas y las liquidaciones de Cashea recibidas.
+ * Los pagos pueden pertenecer a planes vendidos antes del período: la cifra
+ * refleja el efectivo ingresado, no solo el de las ventas del rango.
+ */
+async function calcularCobranza(
+  ventas: Venta[],
+  desde: Date,
+  finExclusivo: Date,
+): Promise<CobranzaPeriodo> {
+  const contado = ventas
+    .filter((venta) => venta.modalidadPago === "contado")
+    .reduce((total, venta) => total + venta.total, 0);
+  const vendido = ventas.reduce((total, venta) => total + venta.total, 0);
+
+  const [pagos, iniciales, liquidaciones, kpis] = await Promise.all([
+    sumarPagosEnRango(desde, finExclusivo),
+    sumarInicialesEnRango(desde, finExclusivo),
+    sumarLiquidacionesEnRango(desde, finExclusivo),
+    obtenerKpisFinanciamientos(),
+  ]);
+
+  return calcularCobranzaPeriodo({
+    vendido,
+    contado,
+    pagos,
+    iniciales,
+    liquidaciones,
+    porCobrar: kpis.porCobrar,
+  });
+}
+
+/**
  * Obtiene KPIs, serie diaria, top de productos y métodos de pago de un rango.
  *
  * `count`, `sum` y `average` se resuelven en una única consulta de agregación.
@@ -223,6 +266,7 @@ export async function obtenerEstadisticas(
   );
   const calculados = calcularKpis(ventas);
   const ingresosUsd = Number(ingresos ?? calculados.ingresosUsd);
+  const cobranza = await calcularCobranza(ventas, desde, finExclusivo);
 
   return {
     kpis: {
@@ -231,6 +275,7 @@ export async function obtenerEstadisticas(
       ventas: Number(conteo ?? calculados.ventas),
       ticketPromedio: Number(promedio ?? calculados.ticketPromedio),
     },
+    cobranza,
     serie: calcularSerieDiaria(ventas, desde, hasta),
     productos: calcularTopProductos(ventas),
     metodosPago: calcularMetodosPago(ventas),

@@ -263,9 +263,20 @@ export type ResumenMetodoPago = {
   porcentaje: number;
 };
 
+/** Cobranza del período frente a lo vendido. */
+export type CobranzaPeriodo = {
+  /** Cobrado en el rango: contado, iniciales, cuotas y liquidaciones. */
+  cobrado: number;
+  /** Saldo pendiente actual de los planes de la tienda. */
+  porCobrar: number;
+  /** Porcentaje cobrado sobre lo vendido en el rango. */
+  porcentajeCobrado: number;
+};
+
 /** Resultado completo de la página de estadísticas. */
 export type EstadisticasPeriodo = {
   kpis: KpisEstadisticas;
+  cobranza: CobranzaPeriodo;
   serie: PuntoVentasDia[];
   productos: ProductoVendido[];
   metodosPago: ResumenMetodoPago[];

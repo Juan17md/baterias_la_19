@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import type {
+  CobranzaPeriodo,
   CuotaFinanciamiento,
   EstadoCuota,
   EstadoFinanciamiento,
@@ -287,4 +288,39 @@ export function calcularProximaCuota(
       (cuota) => cuota.estado !== "pagada" && cuota.estado !== "informativa",
     ) ?? null
   );
+}
+
+export type DatosCobranzaPeriodo = {
+  /** Total vendido en el período. */
+  vendido: number;
+  /** Ventas de contado cobradas en el período. */
+  contado: number;
+  /** Cuotas de «Por la tienda» cobradas en el período. */
+  pagos: number;
+  /** Iniciales de los planes vendidos en el período. */
+  iniciales: number;
+  /** Liquidaciones de Cashea recibidas en el período. */
+  liquidaciones: number;
+  /** Saldo pendiente actual de los planes de la tienda. */
+  porCobrar: number;
+};
+
+/**
+ * Combina las fuentes de cobro del período y calcula el avance sobre lo
+ * vendido. Los pagos pueden pertenecer a planes de ventas anteriores, por lo
+ * que el porcentaje puede superar el 100 %.
+ */
+export function calcularCobranzaPeriodo(
+  datos: DatosCobranzaPeriodo,
+): CobranzaPeriodo {
+  const cobrado = redondear2(
+    datos.contado + datos.pagos + datos.iniciales + datos.liquidaciones,
+  );
+
+  return {
+    cobrado,
+    porCobrar: redondear2(datos.porCobrar),
+    porcentajeCobrado:
+      datos.vendido > 0 ? redondear2((cobrado / datos.vendido) * 100) : 0,
+  };
 }

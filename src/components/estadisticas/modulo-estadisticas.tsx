@@ -26,6 +26,7 @@ import {
   sumarDias,
 } from "@/lib/utils";
 import type { EstadisticasPeriodo, RangoEstadisticas } from "@/types";
+import { ComparativaCobranza } from "./comparativa-cobranza";
 import { DistribucionPagos } from "./distribucion-pagos";
 import { GraficoVentasDia } from "./grafico-ventas-dia";
 import { SelectorRango, type PresetRango } from "./selector-rango";
@@ -281,6 +282,12 @@ export function ModuloEstadisticas() {
             Los importes en Bs se calculan con la tasa BCV guardada en cada
             venta.
           </p>
+
+          <ComparativaCobranza
+            vendido={datos.kpis.ingresosUsd}
+            cobrado={datos.cobranza.cobrado}
+            porCobrar={datos.cobranza.porCobrar}
+          />
 
           {datos.kpis.ventas > 0 ? (
             <div className="grid gap-4 lg:grid-cols-2">

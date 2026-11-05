@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
 import {
+  calcularCobranzaPeriodo,
   calcularEstadoFinanciamiento,
   calcularPlanFinanciamiento,
   calcularProximaCuota,
@@ -388,5 +389,65 @@ describe("calcularProximaCuota", () => {
         cuota(2, 40, fecha(2026, 2, 15), "informativa"),
       ]),
     ).toBeNull();
+  });
+});
+
+describe("calcularCobranzaPeriodo", () => {
+  it("suma contado, iniciales, pagos y liquidaciones", () => {
+    const cobranza = calcularCobranzaPeriodo({
+      vendido: 500,
+      contado: 200,
+      pagos: 100,
+      iniciales: 50,
+      liquidaciones: 25,
+      porCobrar: 120,
+    });
+
+    expect(cobranza.cobrado).toBe(375);
+    expect(cobranza.porCobrar).toBe(120);
+    expect(cobranza.porcentajeCobrado).toBe(75);
+  });
+
+  it("reporta cero por ciento cuando no hay ventas en el período", () => {
+    const cobranza = calcularCobranzaPeriodo({
+      vendido: 0,
+      contado: 0,
+      pagos: 40,
+      iniciales: 0,
+      liquidaciones: 0,
+      porCobrar: 0,
+    });
+
+    expect(cobranza.cobrado).toBe(40);
+    expect(cobranza.porcentajeCobrado).toBe(0);
+  });
+
+  it("admite un avance superior al 100 % por pagos de ventas anteriores", () => {
+    const cobranza = calcularCobranzaPeriodo({
+      vendido: 100,
+      contado: 0,
+      pagos: 150,
+      iniciales: 0,
+      liquidaciones: 0,
+      porCobrar: 0,
+    });
+
+    expect(cobranza.cobrado).toBe(150);
+    expect(cobranza.porcentajeCobrado).toBe(150);
+  });
+
+  it("redondea a dos decimales", () => {
+    const cobranza = calcularCobranzaPeriodo({
+      vendido: 300,
+      contado: 100,
+      pagos: 33.33,
+      iniciales: 0,
+      liquidaciones: 0,
+      porCobrar: 66.666,
+    });
+
+    expect(cobranza.cobrado).toBe(133.33);
+    expect(cobranza.porCobrar).toBe(66.67);
+    expect(cobranza.porcentajeCobrado).toBe(44.44);
   });
 });

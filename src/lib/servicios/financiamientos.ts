@@ -426,7 +426,10 @@ function sumarCampo(
 }
 
 /** Suma de los pagos no anulados dentro de un rango de fechas. */
-async function cobrarPagosEnRango(desde: Date, hasta: Date): Promise<number> {
+export async function sumarPagosEnRango(
+  desde: Date,
+  hasta: Date,
+): Promise<number> {
   // Solo se suman importes, así que no hace falta ordenar. Sin `orderBy`, la
   // consulta usa el índice de un solo campo `pagos.fecha` con alcance
   // `COLLECTION_GROUP` declarado en `firestore.indexes.json`.
@@ -441,6 +444,36 @@ async function cobrarPagosEnRango(desde: Date, hasta: Date): Promise<number> {
       const datos = documento.data();
       if (datos.anulacion != null) return suma;
       return suma + Number(datos.monto ?? 0);
+    }, 0),
+  );
+}
+
+/** Suma de las iniciales de los planes vendidos dentro de un rango. */
+export async function sumarInicialesEnRango(
+  desde: Date,
+  hasta: Date,
+): Promise<number> {
+  const documentos = await consultarDocumentos([
+    where("fechaVenta", ">=", Timestamp.fromDate(desde)),
+    where("fechaVenta", "<", Timestamp.fromDate(hasta)),
+  ]);
+  return sumarCampo(documentos, "inicial");
+}
+
+/** Suma de las liquidaciones de Cashea recibidas dentro de un rango. */
+export async function sumarLiquidacionesEnRango(
+  desde: Date,
+  hasta: Date,
+): Promise<number> {
+  const documentos = await consultarDocumentos([
+    where("liquidacion.fechaRecibida", ">=", Timestamp.fromDate(desde)),
+    where("liquidacion.fechaRecibida", "<", Timestamp.fromDate(hasta)),
+  ]);
+  return redondear2(
+    documentos.reduce((suma, documento) => {
+      const liquidacion = documento.liquidacion as
+        Record<string, unknown> | null | undefined;
+      return suma + Number(liquidacion?.montoRecibido ?? 0);
     }, 0),
   );
 }
@@ -481,7 +514,7 @@ export async function obtenerKpisFinanciamientos(): Promise<KpisFinanciamientos>
       where("modalidad", "==", "cashea"),
       where("estado", "==", "liquidado"),
     ]),
-    cobrarPagosEnRango(inicioMes, finMes),
+    sumarPagosEnRango(inicioMes, finMes),
     consultarDocumentos([
       where("modalidad", "==", "tienda"),
       where("fechaVenta", ">=", Timestamp.fromDate(inicioMes)),
