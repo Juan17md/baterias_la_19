@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DetalleVenta } from "@/components/historial/detalle-venta";
 
 export const metadata: Metadata = { title: "Comprobante de venta" };
+export const instant = false;
 
 export default async function PaginaDetalleVenta({
   params,
