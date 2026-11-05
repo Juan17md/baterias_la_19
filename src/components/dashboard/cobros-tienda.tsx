@@ -170,7 +170,7 @@ export function CobrosTienda() {
 
       <div className="border-t border-border p-4 sm:px-6">
         <Button asChild variant="outline" size="sm" className="w-full">
-          <Link href="/dashboard/financiamientos">
+          <Link href="/dashboard/financiamientos?modalidad=tienda">
             Ver financiamientos de la tienda
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>

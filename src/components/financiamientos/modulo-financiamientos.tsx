@@ -41,11 +41,21 @@ type CobroPendiente = {
   cuota: CuotaFinanciamiento;
 };
 
+type Props = {
+  /** Modalidad preseleccionada desde un enlace del dashboard. */
+  modalidadInicial?: ModalidadFiltro;
+  /** Estado preseleccionado desde un enlace del dashboard. */
+  estadoInicial?: EstadoFiltro;
+};
+
 /**
  * Módulo de financiamientos: indicadores de cobranza, filtros, búsqueda y
  * tabla paginada de los planes de Cashea y «Por la tienda».
  */
-export function ModuloFinanciamientos() {
+export function ModuloFinanciamientos({
+  modalidadInicial = "todas",
+  estadoInicial = "todos",
+}: Props) {
   const [planes, setPlanes] = useState<Financiamiento[]>([]);
   const [cursor, setCursor] = useState<QueryDocumentSnapshot | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -55,8 +65,8 @@ export function ModuloFinanciamientos() {
   const [cargandoKpis, setCargandoKpis] = useState(true);
   const [recarga, setRecarga] = useState(0);
 
-  const [modalidad, setModalidad] = useState<ModalidadFiltro>("todas");
-  const [estado, setEstado] = useState<EstadoFiltro>("todos");
+  const [modalidad, setModalidad] = useState<ModalidadFiltro>(modalidadInicial);
+  const [estado, setEstado] = useState<EstadoFiltro>(estadoInicial);
   const [busqueda, setBusqueda] = useState("");
   const [termino, setTermino] = useState("");
   const [desde, setDesde] = useState("");

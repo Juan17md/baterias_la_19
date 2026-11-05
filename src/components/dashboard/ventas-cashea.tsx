@@ -178,7 +178,7 @@ export function VentasCashea() {
 
       <div className="border-t border-border p-4 sm:px-6">
         <Button asChild variant="outline" size="sm" className="w-full">
-          <Link href="/dashboard/financiamientos">
+          <Link href="/dashboard/financiamientos?modalidad=cashea&estado=activo">
             Ver financiamientos
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
