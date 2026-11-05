@@ -98,10 +98,10 @@ export function DetalleVenta({ id }: { id: string }) {
         setVenta(encontrada);
         if (encontrada?.financiamientoId) {
           try {
-            const [plan, historial] = await Promise.all([
-              obtenerFinanciamiento(encontrada.financiamientoId),
-              listarPagos(encontrada.financiamientoId),
-            ]);
+            const plan = await obtenerFinanciamiento(
+              encontrada.financiamientoId,
+            );
+            const historial = await listarPagos(encontrada.financiamientoId);
             if (cancelado) return;
             setFinanciamiento(plan);
             setPagos(historial);
