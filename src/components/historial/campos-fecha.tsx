@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
+import { CampoFecha } from "@/components/ui/campo-fecha";
 
 type Props = {
   idPrefijo: string;
@@ -15,8 +15,8 @@ type Props = {
 };
 
 /**
- * Par de campos de fecha para los filtros del historial y de estadísticas.
- * Devuelve un fragmento para encajar directamente en un grid.
+ * Par de campos de fecha para los filtros del historial, estadísticas y
+ * financiamientos. Devuelve un fragmento para encajar directamente en un grid.
  */
 export function CamposFecha({
   idPrefijo,
@@ -33,30 +33,32 @@ export function CamposFecha({
         <label htmlFor={`${idPrefijo}-desde`} className="text-xs font-medium">
           Desde
         </label>
-        <Input
+        <CampoFecha
           id={`${idPrefijo}-desde`}
           name={`${idPrefijo}-desde`}
-          type="date"
-          value={desde}
+          etiqueta="Desde"
+          valor={desde}
           max={hasta || undefined}
-          aria-invalid={invalido || undefined}
-          aria-describedby={errorId}
-          onChange={(evento) => onCambioDesde(evento.target.value)}
+          onCambio={onCambioDesde}
+          errorId={errorId}
+          invalido={invalido}
+          alineacion="izquierda"
         />
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${idPrefijo}-hasta`} className="text-xs font-medium">
           Hasta
         </label>
-        <Input
+        <CampoFecha
           id={`${idPrefijo}-hasta`}
           name={`${idPrefijo}-hasta`}
-          type="date"
-          value={hasta}
+          etiqueta="Hasta"
+          valor={hasta}
           min={desde || undefined}
-          aria-invalid={invalido || undefined}
-          aria-describedby={errorId}
-          onChange={(evento) => onCambioHasta(evento.target.value)}
+          onCambio={onCambioHasta}
+          errorId={errorId}
+          invalido={invalido}
+          alineacion="derecha"
         />
       </div>
     </>

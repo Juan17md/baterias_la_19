@@ -68,6 +68,60 @@ export function fechaAInput(fecha: Date): string {
   return `${anio}-${mes}-${dia}`;
 }
 
+/** Interpreta una fecha `YYYY-MM-DD` como fecha local al inicio del día. */
+export function parsearFechaIso(valor: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
+  const [anio, mes, dia] = valor.split("-").map(Number);
+  const fecha = new Date(anio, mes - 1, dia);
+  if (
+    fecha.getFullYear() !== anio ||
+    fecha.getMonth() !== mes - 1 ||
+    fecha.getDate() !== dia
+  ) {
+    return null;
+  }
+  return fecha;
+}
+
+/** Presenta una fecha local como `dd/mm/aaaa` para el campo de texto. */
+export function formatearFechaEntrada(fecha: Date): string {
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  return `${dia}/${mes}/${fecha.getFullYear()}`;
+}
+
+/**
+ * Interpreta una fecha escrita por el usuario y la devuelve como `YYYY-MM-DD`.
+ * Acepta `dd/mm/aaaa`, `dd-mm-aaaa`, `dd.mm.aaaa`, `aaaa-mm-dd` y `ddmmaaaa`.
+ */
+export function parsearFechaEntrada(texto: string): string | null {
+  const limpio = texto.trim();
+  if (!limpio) return null;
+
+  function validar(candidato: string): string | null {
+    return parsearFechaIso(candidato) ? candidato : null;
+  }
+
+  const numeros = /^(\d{2})(\d{2})(\d{4})$/.exec(limpio);
+  if (numeros) {
+    return validar(`${numeros[3]}-${numeros[2]}-${numeros[1]}`);
+  }
+
+  const diaMesAnio = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/.exec(limpio);
+  if (diaMesAnio) {
+    const [, dia, mes, anio] = diaMesAnio;
+    return validar(`${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`);
+  }
+
+  const anioMesDia = /^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})$/.exec(limpio);
+  if (anioMesDia) {
+    const [, anio, mes, dia] = anioMesDia;
+    return validar(`${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`);
+  }
+
+  return null;
+}
+
 /** Cantidad de días calendario entre dos fechas inclusivas. */
 export function contarDiasInclusivos(desde: Date, hasta: Date): number {
   const inicio = inicioDelDia(desde).getTime();
